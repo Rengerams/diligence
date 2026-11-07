@@ -1,0 +1,116 @@
+# Base44 sandbox development environment.
+# Draait de app rechtstreeks uit de gekloonde broncode met live reload:
+#   - db   : PostgreSQL (infrastructuur, mag een kant-en-klaar image zijn)
+#   - api  : Express API met tsx watch op poort 4000 (alleen intern)
+#   - web  : Vite dev server op hostpoort 3000, proxyt /api naar de API
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: diligence
+      POSTGRES_PASSWORD: diligence_dev
+      POSTGRES_DB: diligence
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U diligence -d diligence"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: on-failure
+
+  api:
+    image: node:22
+    working_dir: /app
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - DATABASE_URL=postgres://diligence:diligence_dev@db:5432/diligence
+      # Platform-provided. Alleen "1" zet de preview-hulpjes aan (o.a. het tonen
+      # van de herstelcode omdat er in de sandbox geen mailserver is).
+      - BASE44_PREVIEW_MODE
+    volumes:
+      - ./:/app
+      # Afhankelijkheden in een volume, zodat de bind-mount ze niet overschrijft.
+      # De startup hieronder synchroniseert ze met package-lock.json.
+      - api_node_modules:/app/node_modules
+    command:
+      - sh
+      - -ec
+      - |
+        if [ ! -f node_modules/.base44-install-stamp ] || ! cmp -s package-lock.json node_modules/.base44-install-stamp; then
+          echo '[base44] api-afhankelijkheden installeren uit package-lock.json'
+          npm ci --no-audit --no-fund
+          cp package-lock.json node_modules/.base44-install-stamp
+        fi
+        exec npx tsx watch server/src/index.ts
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - |
+          fetch('http://127.0.0.1:4000/api/gezondheid')
+            .then((r) => process.exit(r.ok ? 0 : 1))
+            .catch(() => process.exit(1))
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  web:
+    image: node:22
+    working_dir: /app
+    labels:
+      base44.project: Beheersysteem Stichting Diligence
+      base44.kind: web
+      base44.port: 3000
+    ports:
+      - "3000:5173"
+    environment:
+      - BROWSER=none
+      # Platform-provided: laat Vite de hostnaam van de preview-proxy toe.
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+      - BASE44_PREVIEW_MODE
+      - API_PROXY_TARGET=http://api:4000
+    volumes:
+      - ./:/app
+      - web_node_modules:/app/node_modules
+    command:
+      - sh
+      - -ec
+      - |
+        if [ ! -f node_modules/.base44-install-stamp ] || ! cmp -s package-lock.json node_modules/.base44-install-stamp; then
+          echo '[base44] web-afhankelijkheden installeren uit package-lock.json'
+          npm ci --no-audit --no-fund
+          cp package-lock.json node_modules/.base44-install-stamp
+        fi
+        exec npm run dev -- --host 0.0.0.0 --port 5173 --strictPort
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - |
+          const urls = ['http://127.0.0.1:5173/', 'http://127.0.0.1:5173/src/main.tsx']
+          Promise.all(urls.map((u) => fetch(u)))
+            .then((rs) => process.exit(rs.every((r) => r.ok) ? 0 : 1))
+            .catch(() => process.exit(1))
+      interval: 20s
+      timeout: 10s
+      retries: 8
+      start_period: 90s
+
+volumes:
+  db_data:
+  api_node_modules:
+  web_node_modules:
