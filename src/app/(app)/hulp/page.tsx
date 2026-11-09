@@ -72,10 +72,12 @@ export default async function HelpPage() {
           Bel de coördinator via 036-2022044 of mail naar info@diligence-almere.nl. Vertel bij
           welke stap het misgaat en wat je op het scherm ziet.
         </p>
-        <p className="small muted">
-          Deze demo-omgeving gebruikt verzonnen gegevens. Gebruik hier geen echte namen of
-          telefoonnummers.
-        </p>
+        {process.env.SEED_DEMO_DATA !== "false" ? (
+          <p className="small muted">
+            Deze demo-omgeving gebruikt verzonnen gegevens. Gebruik hier geen echte namen of
+            telefoonnummers.
+          </p>
+        ) : null}
       </div>
     </>
   );

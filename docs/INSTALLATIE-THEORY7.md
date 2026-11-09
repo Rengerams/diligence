@@ -239,7 +239,7 @@ chmod 600 .env.production
 
 > **Let op:** deze waarden worden alleen gebruikt als de database **leeg** is. Wil
 > je later een andere beheerder of demo-gegevens, dan moet je de app opnieuw
-> beginnen (zie § 13) of de gebruiker in de app beheren.
+> beginnen (zie § 14) of de gebruiker in de app beheren.
 
 ---
 
@@ -354,7 +354,152 @@ Het restore-script controleert de back-up op schade voordat hij iets terugzet.
 
 ---
 
-## 12. Stap 10 – Later een ander adres gebruiken (optioneel)
+## 12. Stap 10 – Echte deelnemers erin zetten
+
+Je database is al "echt" vanaf de eerste start: het SQLite-bestand in het
+Docker-volume bewaart alles wat je invoert, ook na een herstart, een update of
+een nieuwe versie van de app. Je hoeft dus **geen** MySQL of PostgreSQL te
+installeren en er is geen tweede database voor productie. Het verschil tussen
+demo en echt is alleen **of er voorbeeldrijen in staan**:
+
+- Op deze server (productie) worden demogegevens **nooit** geladen, ook niet als
+  `SEED_DEMO_DATA` per ongeluk op `true` staat. De database begint leeg, met
+  alleen het beheerdersaccount uit `SEED_ADMIN_*`.
+- Een lege deelnemerslijst is dus goed nieuws, geen fout.
+
+### 12.1 Controleer dat je met een lege database begint
+
+1. Log in en open **Deelnemers**. Je hoort "nog geen deelnemers" te zien, niet
+   Jan de Vries of Anna Smit.
+2. Open **Uitjes**. Er horen geen voorbeeld-uitjes in te staan.
+
+Zie je toch verzonnen namen, dan is deze database ooit als demo gevuld. Zet er
+dan **nu** nog geen echte mensen in: begin opnieuw met een lege database
+(§ 14). Doe dat nooit meer zodra er echte gegevens in staan.
+
+### 12.2 Maak eerst één back-up
+
+Doe dit vóór de eerste echte import, zodat je altijd terug kunt:
+
+```bash
+cd /opt/diligence
+docker compose --env-file .env.production run --rm app node scripts/backup.mjs
+```
+
+Zet ook meteen de dagelijkse back-up aan (§ 11), als je dat nog niet deed. Een
+database met echte deelnemers zonder werkende back-up is geen goed idee.
+
+### 12.3 Zet eerst je medewerkers neer
+
+Onder **Gebruikers** maak je een account per vrijwilliger, met een eigen rol.
+Het recht om deelnemers te beheren en te importeren zit in `participants.manage`
+(standaard bij Admin en Beheerder). Laat iedereen tweestapsverificatie instellen
+onder **Mijn account → Beveiliging**.
+
+### 12.4 Drie manieren om echte mensen erin te zetten
+
+**A. Eén voor één** – handig voor de eerste paar mensen en om te oefenen.
+**Deelnemers → Nieuwe deelnemer** (`/deelnemers/nieuw`). Je vult naam, telefoon
+of e-mail, adres, kaarten, mobiliteit en een notitie in.
+
+**B. In één keer uit een lijst (CSV)** – voor de bestaande deelnemersdatabase.
+**Deelnemers → Deelnemers importeren** (`/deelnemers/import`). Daar staat ook de
+knop **Voorbeeldbestand downloaden** (`/templates/deelnemers-import.csv`).
+
+| Kolom | Verplicht | Voorbeeld |
+|---|---|---|
+| `Voornaam`, `Achternaam` | ja | `Jan`, `de Vries` |
+| `Tussenvoegsel` | nee | `de` |
+| `Telefoon` | ja, óf e-mail | `0612345678` |
+| `Email` | ja, óf telefoon | `jan@example.nl` |
+| `Straat`, `Huisnummer`, `Postcode`, `Plaats` | nee | `Molenstraat`, `12`, `1333 AB`, `Almere` (lege plaats wordt Almere) |
+| `Kaarten`, `Rollator`, `Rolstoel`, `Hulp bij instappen`, `Notitie` | nee | `Museumkaart`, `ja`/`nee` |
+
+Zo maak je het bestand:
+
+1. Open je bestaande lijst in Excel of LibreOffice en zet de kolomnamen precies
+   zoals hierboven (de kopregel mag ook `Telefoon 2`, `E-mail` of `Straat` met
+   accenten bevatten).
+2. Kies **Opslaan als → CSV** (UTF-8). Puntkomma en komma mogen allebei; de app
+   herkent het scheidingsteken zelf.
+3. Zet telefoonnummers als tekst, niet als formule of getal met `+31`.
+4. Importeer eerst **drie regels** als proef, controleer die in de lijst, en doe
+   daarna de rest.
+
+De app controleert het hele bestand vóór er iets wordt opgeslagen: je ziet per
+rij wat er fout is en er wordt niets bewaard zolang er één fout in staat. Let op
+deze regels:
+
+- Een telefoonnummer dat al in de database staat, geeft een fout. Importeer
+  daarom nooit hetzelfde bestand twee keer.
+- Importeren **maakt alleen nieuwe deelnemers**. Het werkt bestaande mensen niet
+  bij. Verbeter een fout dus in de app (deelnemer openen → wijzigen), niet door
+  het bestand opnieuw te importeren.
+- Bezoekgeschiedenis zit niet in dit bestand; die importeer je apart (hieronder).
+
+**C. Bezoekgeschiedenis importeren** – nodig om eerlijk te kunnen indelen.
+**Deelnemers → Bezoekgeschiedenis importeren** (`/deelnemers/geschiedenis`),
+voorbeeldbestand: `/templates/geschiedenis-import.csv`.
+
+| Kolom | Verplicht | Voorbeeld |
+|---|---|---|
+| `Naam` | ja, óf telefoon | `Jan de Vries` |
+| `Telefoon` | ja, óf naam | `0612345678` |
+| `Datum` | ja | `2025-10-01` of `01-10-2025` |
+| `Omschrijving` | nee | `Museum Harderwijk` |
+
+- De deelnemers moeten er **al** in staan: de app zoekt iemand op telefoonnummer
+  of op de volledige naam (voornaam + tussenvoegsel + achternaam).
+- Een regel die bij niemand of bij twee mensen past, stopt de hele import met
+  het rijnummer erbij. Los dat op in het bestand en probeer opnieuw.
+- Dezelfde persoon met dezelfde datum en omschrijving wordt als dubbel
+  overgeslagen, dus opnieuw importeren mag hier wel.
+- Alleen bezoeken van de **laatste 12 maanden** tellen mee voor "vaak geweest".
+  Zonder die geschiedenis kan de indeling niet eerlijk rekenen: importeer
+  minstens het laatste jaar.
+
+**Daarna vul je de rest van het systeem:** een periode en het programma
+(**Uitjes → Importeren**, Excel of CSV), locaties (**Locaties**) en voertuigen
+met kenteken en aantal plekken (**Voertuigen**).
+
+### 12.5 Controleer na de eerste echte import
+
+- Het aantal deelnemers in de lijst klopt met je bestand.
+- Open drie willekeurige deelnemers en controleer telefoonnummer, adres en
+  mobiliteit.
+- **Deelnemers → Exporteren** en vergelijk het aantal regels met je bronbestand.
+- Maak een nieuwe back-up (§ 11) en bewaar die buiten de server.
+- Doe één testronde met een verzonnen evenement voordat je een echt evenement
+  inplant.
+
+### 12.6 Afspraken zodra er echte mensen in staan
+
+- **Niet meer resetten.** Verwijder het databasevolume nooit meer (§ 14 is
+  daarna verboden terrein).
+- **Geen importbestanden bewaren.** Zet de CSV niet in de Git-repo, niet in de
+  map `data/` en niet in je cloudopslag zonder beveiliging. Verwijder hem van je
+  laptop en van de server zodra de import gelukt is.
+- **Geen e-mails naar deelnemers** voordat `BREVO_API_KEY`, `EMAIL_FROM` en
+  `APP_URL` kloppen en je één mail naar jezelf hebt getest; de afmeldlink in de
+  mail gebruikt `APP_URL`.
+- **Eén omgeving.** Werk met echte deelnemers alleen op deze server, niet op je
+  laptop of in de demo.
+- **Privacy.** Echte persoonsgegevens betekenen AVG-verplichtingen. Regel dit
+  vóór je breder gaat werken: zie de checklist in
+  [`PRODUCTIE.md`](PRODUCTIE.md) (grondslag, bewaartermijn, wie toegang heeft,
+  verwerkersovereenkomsten en een penetratietest).
+
+### 12.7 Is SQLite genoeg voor echte gegevens?
+
+Ja, voor deze stichting ruim: één server, één databasebestand, honderden of
+duizenden deelnemers en een handvol gelijktijdige gebruikers. SQLite kan alleen
+niet veilig door **meerdere servers tegelijk** worden beschreven. Kom je ooit op
+meerdere servers of meerdere locaties die tegelijk schrijven, dan is PostgreSQL
+de volgende stap; daar is de app nu niet op voorbereid.
+
+---
+
+## 13. Stap 11 – Later een ander adres gebruiken (optioneel)
 
 Je kunt op het testsubdomein blijven werken zolang je wilt. Wil je de app later
 op een ander (sub)domein zetten, dan is dat alleen een kwestie van het adres
@@ -385,7 +530,7 @@ aanpassen:
 
 ---
 
-## 13. Bijwerken naar een nieuwe versie
+## 14. Bijwerken naar een nieuwe versie
 
 ```bash
 cd /opt/diligence
@@ -412,14 +557,14 @@ docker compose --env-file .env.production up -d
 
 ---
 
-## 14. Veelvoorkomende problemen
+## 15. Veelvoorkomende problemen
 
 | Verschijnsel | Oorzaak en oplossing |
 |---|---|
 | `port is already allocated` bij het starten | Er draait al iets op poort 80/443 (bijvoorbeeld een oude webserver). `ss -tlnp \| grep -E ':80\|:443'` laat zien wat. Stop dat, of vraag Theory7 het te verwijderen. |
 | Certificaatfout of "not secure" | DNS wijst nog niet naar de server, of poort 80 is dicht. Controleer `dig +short app.jouwdomein.nl` en `ufw status`. |
 | App-container blijft `restarting` | Bekijk `docker compose logs --tail=80 app`. Vaak een typefout in `.env.production` of geen schrijfrechten op het datavolume. |
-| Inloggen lukt niet met je eigen e-mailadres | De database was al gevuld voordat je `SEED_ADMIN_*` instelde. Bestaande databases worden niet opnieuw ingevuld; begin opnieuw (§ 13) of log in met het bestaande account. |
+| Inloggen lukt niet met je eigen e-mailadres | De database was al gevuld voordat je `SEED_ADMIN_*` instelde. Bestaande databases worden niet opnieuw ingevuld; begin opnieuw (§ 14) of log in met het bestaande account. |
 | "Te veel inlogpogingen" | De app blokkeert 10 pogingen per 15 minuten per e-mailadres/IP. Wacht 15 minuten. |
 | E-mails worden niet verstuurd | Zonder `BREVO_API_KEY` blijven berichten in de wachtrij staan. Dat is de demo-stand, geen fout. |
 | Schijf vol | `df -h`. SQLite heeft ruimte nodig. Maak oude back-ups weg of breid de VPS uit. |
@@ -438,7 +583,7 @@ docker stats --no-stream              # geheugen en CPU
 
 ---
 
-## 15. Alternatief: zonder Docker
+## 16. Alternatief: zonder Docker
 
 Kan, maar het is meer werk en je moet Node.js zelf bijhouden. De app heeft
 **Node.js 24** nodig (voor `node:sqlite`) en een procesmanager.
@@ -491,7 +636,7 @@ met Certbot. Bijwerken = `git pull && pnpm install --frozen-lockfile && pnpm bui
 
 ---
 
-## 16. Checklist voordat je met vrijwilligers gaat testen
+## 17. Checklist voordat je met vrijwilligers gaat testen
 
 - [ ] `https://app.jouwdomein.nl` opent en `/api/health` zegt `ok`.
 - [ ] Inloggen werkt met het beheerdersaccount uit `.env.production`.
@@ -505,7 +650,7 @@ met Certbot. Bijwerken = `git pull && pnpm install --frozen-lockfile && pnpm bui
 
 ---
 
-## 17. Eerlijk over de grenzen
+## 18. Eerlijk over de grenzen
 
 - Dit is nog een **werkversie**, geen productieklare versie. Zet er geen echte
   deelnemersgegevens in tot de privacy- en beveiligingsstappen uit

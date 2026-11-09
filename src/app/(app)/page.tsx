@@ -208,10 +208,12 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="alert alert-info" style={{ marginTop: 24 }}>
-        <strong>Demo-omgeving.</strong> Alle namen, telefoonnummers en evenementen zijn verzonnen.
-        Gebruik deze omgeving niet met echte persoonsgegevens.
-      </div>
+      {process.env.SEED_DEMO_DATA !== "false" ? (
+        <div className="alert alert-info" style={{ marginTop: 24 }}>
+          <strong>Demo-omgeving.</strong> Alle namen, telefoonnummers en evenementen zijn verzonnen.
+          Gebruik deze omgeving niet met echte persoonsgegevens.
+        </div>
+      ) : null}
     </>
   );
 }

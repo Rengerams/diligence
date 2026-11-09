@@ -105,7 +105,8 @@ Stap voor stap installeren op een eigen server bij Theory7 (op je eigen subdomei
 bijvoorbeeld `app.jouwdomein.nl`):
 [`docs/INSTALLATIE-THEORY7.md`](docs/INSTALLATIE-THEORY7.md). Kort samengevat: dit
 is één Node.js-proces met een SQLite-bestand, dus het past op een VPS met Docker en
-niet op gedeelde webhosting.
+niet op gedeelde webhosting. Echte deelnemers in een lege database zetten
+(geen demo): zie § 12 van die handleiding.
 
 ```bash
 cp .env.example .env.production   # vul echte waarden in

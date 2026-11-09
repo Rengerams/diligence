@@ -114,7 +114,7 @@ export default async function UsersPage({
                 required
                 autoComplete="new-password"
               />
-              <span className="help">Minstens 8 tekens; de gebruiker kan het later niet zelf wijzigen in deze demo.</span>
+              <span className="help">Minstens 8 tekens; de gebruiker kan het later niet zelf wijzigen.</span>
             </div>
             <div className="field">
               <label htmlFor="new-role">Rol</label>
