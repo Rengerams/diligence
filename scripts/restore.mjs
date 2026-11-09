@@ -28,15 +28,24 @@ decipher.setAuthTag(tag);
 const plain = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
 
 fs.mkdirSync(path.dirname(target), { recursive: true });
-fs.writeFileSync(target, plain, { mode: 0o600 });
-
-const db = new DatabaseSync(target);
+// Eerst uitpakken naar een tijdelijk bestand en controleren. Pas als de
+// controle slaagt, vervangt de back-up het doelbestand. Zo blijft een goede
+// database staan als de back-up beschadigd is.
+const temp = `${target}.restore-${process.pid}.tmp`;
+fs.writeFileSync(temp, plain, { mode: 0o600 });
+fs.chmodSync(temp, 0o600);
 try {
-  const result = db.prepare("PRAGMA integrity_check").get();
-  if (!result || result.integrity_check !== "ok") {
-    throw new Error(`Integriteitscontrole mislukt: ${JSON.stringify(result)}`);
+  const db = new DatabaseSync(temp);
+  try {
+    const result = db.prepare("PRAGMA integrity_check").get();
+    if (!result || result.integrity_check !== "ok") {
+      throw new Error(`Integriteitscontrole mislukt: ${JSON.stringify(result)}`);
+    }
+  } finally {
+    db.close();
   }
+  fs.renameSync(temp, target);
 } finally {
-  db.close();
+  if (fs.existsSync(temp)) fs.unlinkSync(temp);
 }
 console.log(`Back-up uitgepakt naar ${target}. Stop de app en vervang hiermee de actieve database.`);

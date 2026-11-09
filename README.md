@@ -10,7 +10,9 @@ Werkende demo van het beheersysteem voor de uitjes van Stichting Diligence Almer
 
 - **URL:** <http://localhost:3100> (de server draait in deze sessie)
 - **Demo-accounts** (staan bewust niet op het inlogscherm; ze bestaan alleen als
-  `SEED_DEMO_DATA` niet op `false` staat):
+  `SEED_DEMO_DATA` niet op `false` staat). Alleen voor lokaal ontwikkelen; in
+  productie weigert de app te starten zonder `SEED_ADMIN_EMAIL` en een sterk
+  `SEED_ADMIN_PASSWORD` en worden er nooit demo-accounts aangemaakt:
   - Beheerder: `admin@diligence.local` — wachtwoord `demo1234`
   - Coördinator: `coordinator@diligence.local` — wachtwoord `demo1234`
   - Chauffeur: `chauffeur@diligence.local` — wachtwoord `demo1234`
@@ -71,7 +73,7 @@ pnpm start        # productie op http://localhost:3100
 
 De applicatie gebruikt voor deze demo een ingebouwde SQLite-database (`data/diligence.db`). Bij de eerste start worden demo-gegevens geladen. De productiearchitectuur in het plan gaat uit van PostgreSQL.
 
-**E-mail:** zonder `BREVO_API_KEY` blijft de e-mailwachtrij in demonstratiemodus; berichten worden klaargezet maar niet verstuurd. Met `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` en `APP_URL` wordt via Brevo verzonden. Zet in productie ook `COOKIE_SECURE=true` en `ENFORCE_2FA=true`. De sessie verloopt na 8 uur absoluut en na 60 minuten inactiviteit; `SESSION_IDLE_MINUTES` is instelbaar.
+**E-mail:** zonder `BREVO_API_KEY` blijft de e-mailwachtrij in demonstratiemodus; berichten worden klaargezet maar niet verstuurd. Met `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` en `APP_URL` wordt via Brevo verzonden. Na het bevestigen van de indeling verstuurt de app de uitslag meteen naar iedereen met een e-mailadres; de wachtrij op `/berichten` blijft bestaan voor mislukte berichten. Zet in productie ook `COOKIE_SECURE=true` en `ENFORCE_2FA=true`. De sessie verloopt na 8 uur absoluut en na 60 minuten inactiviteit; `SESSION_IDLE_MINUTES` is instelbaar.
 
 **Schoon bronarchief:** `pnpm package:source` maakt `dist/diligence-source-<datum>.tar.gz` en op Windows ook een `.zip`, zonder `.next`, `data`, cookies, database, back-ups of oude zipbestanden. De browsercontroles zoeken automatisch Chrome/Chromium; zet `CHROME_PATH` als jouw browser op een andere plek staat.
 

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { get, run } from "./db";
+import { get, run, transaction } from "./db";
 
 export function rateLimitKey(email: string, ip: string): string {
   return createHash("sha256")
@@ -7,6 +7,11 @@ export function rateLimitKey(email: string, ip: string): string {
     .digest("hex");
 }
 
+/**
+ * Verbruikt één poging uit een venster. De lees-controle-schrijf-stappen zitten
+ * in één transactie (BEGIN IMMEDIATE), zodat twee gelijktijdige verzoeken samen
+ * nooit meer pogingen verbruiken dan het maximum.
+ */
 export function consumeRateLimit(
   key: string,
   limit = 10,
@@ -14,31 +19,33 @@ export function consumeRateLimit(
 ): { allowed: boolean; retryAfterSeconds: number } {
   const now = Date.now();
   const cutoff = new Date(now - windowSeconds * 1000).toISOString();
-  const row = get<{ window_start: string; count: number }>(
-    "SELECT window_start, count FROM rate_limits WHERE key = ?",
-    key,
-  );
-
-  if (!row || row.window_start < cutoff) {
-    run(
-      `INSERT INTO rate_limits (key, window_start, count) VALUES (?, ?, 1)
-       ON CONFLICT(key) DO UPDATE SET window_start = excluded.window_start, count = 1`,
+  return transaction(() => {
+    const row = get<{ window_start: string; count: number }>(
+      "SELECT window_start, count FROM rate_limits WHERE key = ?",
       key,
-      new Date(now).toISOString(),
     );
+
+    if (!row || row.window_start < cutoff) {
+      run(
+        `INSERT INTO rate_limits (key, window_start, count) VALUES (?, ?, 1)
+         ON CONFLICT(key) DO UPDATE SET window_start = excluded.window_start, count = 1`,
+        key,
+        new Date(now).toISOString(),
+      );
+      return { allowed: true, retryAfterSeconds: 0 };
+    }
+
+    if (row.count >= limit) {
+      const retry = Math.max(
+        1,
+        Math.ceil((new Date(row.window_start).getTime() + windowSeconds * 1000 - now) / 1000),
+      );
+      return { allowed: false, retryAfterSeconds: retry };
+    }
+
+    run("UPDATE rate_limits SET count = count + 1 WHERE key = ?", key);
     return { allowed: true, retryAfterSeconds: 0 };
-  }
-
-  if (row.count >= limit) {
-    const retry = Math.max(
-      1,
-      Math.ceil((new Date(row.window_start).getTime() + windowSeconds * 1000 - now) / 1000),
-    );
-    return { allowed: false, retryAfterSeconds: retry };
-  }
-
-  run("UPDATE rate_limits SET count = count + 1 WHERE key = ?", key);
-  return { allowed: true, retryAfterSeconds: 0 };
+  });
 }
 
 export function clearRateLimit(key: string): void {

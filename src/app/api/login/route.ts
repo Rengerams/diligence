@@ -3,7 +3,7 @@ import { get } from "@/lib/db";
 import { verifyPassword } from "@/lib/passwords";
 import { createSession, SESSION_COOKIE } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
-import { clearRateLimit, consumeRateLimit, rateLimitKey } from "@/lib/rate-limit";
+import { consumeRateLimit, rateLimitKey } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -63,7 +63,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  clearRateLimit(limitKey);
+  // De teller blijft staan tot de tweede stap is gelukt. Anders kan iemand met
+  // een bekend wachtwoord onbeperkt TOTP-codes proberen.
   const { token, expiresAt } = createSession(user.id, user.two_factor_enabled !== 1);
   writeAudit({
     actor: { id: user.id, name: user.name, roleName: user.role_name },

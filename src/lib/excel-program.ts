@@ -61,15 +61,24 @@ function cellText(value: unknown): string {
   return String(value).trim();
 }
 
+/** Controleert of een ISO-datum echt bestaat (2026-02-31 bestaat niet). */
+function isValidIsoDate(iso: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+  const date = new Date(`${iso}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === iso;
+}
+
 function parseDate(value: unknown): string | null {
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString().slice(0, 10);
+  }
   const text = cellText(value);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return isValidIsoDate(text) ? text : null;
   const match = text.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
   if (!match) return null;
   const [, day, month, year] = match;
   const iso = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  return Number.isNaN(new Date(`${iso}T12:00:00Z`).getTime()) ? null : iso;
+  return isValidIsoDate(iso) ? iso : null;
 }
 
 function parseTime(value: string): [string, string] | null {
@@ -151,8 +160,12 @@ function chooseYear(month: number, period: { start_date: string; end_date: strin
 
 export async function readExcelProgram(
   buffer: Buffer,
-  period: { start_date: string; end_date: string },
+  period: { start_date: string; end_date: string; default_capacity?: number },
 ): Promise<ParsedProgram> {
+  const fallbackCapacity =
+    Number.isInteger(period.default_capacity) && (period.default_capacity ?? 0) >= 1
+      ? (period.default_capacity as number)
+      : 14;
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as never);
   const worksheet = workbook.worksheets[0];
@@ -279,13 +292,16 @@ export async function readExcelProgram(
       continue;
     }
     const capacityValue = headerMap.capaciteit >= 0 ? cellText(cells[headerMap.capaciteit]) : "";
-    const capacity = capacityValue ? Number.parseInt(capacityValue, 10) : 14;
+    const capacity = capacityValue ? Number.parseInt(capacityValue, 10) : fallbackCapacity;
     if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100) {
       errors.push({ row: rowNumber, message: "De capaciteit moet tussen 1 en 100 liggen." });
       continue;
     }
     if (!capacityValue) {
-      warnings.push({ row: rowNumber, message: "Geen capaciteit ingevuld; 14 gebruikt." });
+      warnings.push({
+        row: rowNumber,
+        message: `Geen capaciteit ingevuld; ${fallbackCapacity} gebruikt.`,
+      });
     }
 
     rows.push({

@@ -226,8 +226,8 @@ Wat betekenen de belangrijkste regels?
 | `APP_URL` | Volledige URL met `https://`, gebruikt in afmeldlinks van e-mails. |
 | `COOKIE_SECURE` | `true` zodra je via HTTPS werkt. |
 | `ENFORCE_2FA` | `true` verplicht tweestapsverplichting voor de beheerder. |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | Het beheerdersaccount dat wordt aangemaakt als de database nog leeg is. **Zonder deze regels** bestaat het demo-account `admin@diligence.local` met wachtwoord `demo1234`. |
-| `SEED_DEMO_DATA` | `false` = alleen een beheerder, geen verzonnen deelnemers en uitjes. `true` = de demo met 14 deelnemers, 9 uitjes en demo-accounts. |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | Het beheerdersaccount dat wordt aangemaakt als de database nog leeg is. **Verplicht in productie**: zonder deze regels start de app niet, zodat er nooit een account met een standaardwachtwoord ontstaat. Het wachtwoord moet minimaal 12 tekens zijn. |
+| `SEED_DEMO_DATA` | `false` = alleen een beheerder, geen verzonnen deelnemers en uitjes. In productie worden demogegevens nooit aangemaakt, ook niet met `true`. |
 | `BACKUP_KEY` | Sleutel om back-ups te versleutelen. Zet hem **niet** op dezelfde server als de back-ups. |
 | `BREVO_API_KEY` | Optioneel. Zonder sleutel blijft de e-mailwachtrij in demo-stand. |
 

@@ -24,6 +24,12 @@ export async function register() {
     );
     db.prepare("PRAGMA wal_checkpoint(TRUNCATE);").get();
   } catch (error) {
+    // Een lege productiedatabase zonder goede inrichtingsgegevens mag nooit
+    // stilzwijgend doorgaan: dan zou er een account met een bekend wachtwoord
+    // kunnen ontstaan. Stop het opstarten en laat de melding zien.
+    if (error instanceof Error && error.name === "SeedConfigurationError") {
+      throw error;
+    }
     warnings.push(
       `Databasecontrole bij start mislukt: ${error instanceof Error ? error.message : "onbekende fout"}`,
     );

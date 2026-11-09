@@ -417,17 +417,53 @@ const signups: SignupSeed[] = [
   { id: "s-24", participantId: "p-14", targetType: "outing", outingId: "o-08", groupMode: "alone" },
 ];
 
+/**
+ * Fout in de eenmalige inrichting van een lege productiedatabase.
+ *
+ * Deze fout moet het opstarten tegenhouden: liever een app die niet start dan
+ * een productiesysteem met een bekend demowachtwoord.
+ */
+export class SeedConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SeedConfigurationError";
+  }
+}
+
 export function seedDatabase(db: DatabaseSync): void {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  // Op een echte server bestaat er nooit een standaardaccount. Zonder
+  // SEED_ADMIN_EMAIL en een sterk SEED_ADMIN_PASSWORD weigert de app te starten.
+  if (isProduction) {
+    const email = (process.env.SEED_ADMIN_EMAIL ?? "").trim();
+    const password = process.env.SEED_ADMIN_PASSWORD ?? "";
+    if (!email || !password) {
+      throw new SeedConfigurationError(
+        "De database is leeg. Zet SEED_ADMIN_EMAIL en SEED_ADMIN_PASSWORD in de omgeving om eenmalig een beheerder aan te maken.",
+      );
+    }
+    if (password.length < 12 || password === "demo1234") {
+      throw new SeedConfigurationError(
+        "SEED_ADMIN_PASSWORD moet minimaal 12 tekens zijn en mag niet het demowachtwoord zijn.",
+      );
+    }
+  }
+
   const insertUser = db.prepare(
     "INSERT INTO users (id, name, email, password_hash, role, role_key, active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
   );
-  // Op een echte server zet je SEED_ADMIN_EMAIL en SEED_ADMIN_PASSWORD, zodat er
-  // geen account met het bekende demowachtwoord bestaat.
-  const adminEmail = (process.env.SEED_ADMIN_EMAIL || "admin@diligence.local")
+  const adminEmail = (isProduction
+    ? (process.env.SEED_ADMIN_EMAIL as string)
+    : process.env.SEED_ADMIN_EMAIL || "admin@diligence.local"
+  )
     .trim()
     .toLowerCase();
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "demo1234";
-  const adminName = process.env.SEED_ADMIN_NAME || "Beheerder Demo";
+  const adminPassword = isProduction
+    ? (process.env.SEED_ADMIN_PASSWORD as string)
+    : process.env.SEED_ADMIN_PASSWORD || "demo1234";
+  const adminName =
+    process.env.SEED_ADMIN_NAME || (isProduction ? "Beheerder" : "Beheerder Demo");
   insertUser.run(
     "u-admin",
     adminName,
@@ -438,9 +474,10 @@ export function seedDatabase(db: DatabaseSync): void {
     NOW,
   );
 
-  // SEED_DEMO_DATA=false laat alleen het beheerdersaccount staan, zonder
-  // verzonnen deelnemers, evenementen en opgaven.
-  if (process.env.SEED_DEMO_DATA === "false") {
+  // In productie komen er nooit verzonnen deelnemers, evenementen of
+  // medewerkersaccounts in de database, ook niet als SEED_DEMO_DATA per ongeluk
+  // op true staat.
+  if (isProduction || process.env.SEED_DEMO_DATA === "false") {
     return;
   }
 

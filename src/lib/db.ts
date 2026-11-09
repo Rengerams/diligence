@@ -263,7 +263,8 @@ CREATE TABLE IF NOT EXISTS notifications (
   error TEXT,
   unsubscribe_token TEXT NOT NULL,
   created_at TEXT NOT NULL,
-  sent_at TEXT
+  sent_at TEXT,
+  delivery_attempt_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS notifications_run ON notifications(run_id, status);
@@ -307,7 +308,8 @@ CREATE TABLE IF NOT EXISTS import_previews (
   created_at TEXT NOT NULL,
   created_by TEXT REFERENCES users(id),
   file_name TEXT NOT NULL DEFAULT '',
-  payload TEXT NOT NULL
+  payload TEXT NOT NULL,
+  expires_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS import_batches (
@@ -376,7 +378,7 @@ export function getDb(): DatabaseSync {
     const count = db.prepare("SELECT COUNT(*) AS n FROM users").get() as
       | { n: number }
       | undefined;
-    if (!count || Number(count.n) === 0) {
+    if ((!count || Number(count.n) === 0) && process.env.NEXT_PHASE !== "phase-production-build") {
       seedDatabase(db);
     }
     globalWithDb.__diligenceDb = db;
@@ -439,6 +441,37 @@ function ensureSchemaUpdates(db: DatabaseSync): void {
   const auditColumns = db.prepare("PRAGMA table_info(audit_log)").all() as { name: string }[];
   if (!auditColumns.some((column) => column.name === "actor_role")) {
     db.exec("ALTER TABLE audit_log ADD COLUMN actor_role TEXT NOT NULL DEFAULT '';");
+  }
+
+  const previewColumns = db.prepare("PRAGMA table_info(import_previews)").all() as {
+    name: string;
+  }[];
+  if (!previewColumns.some((column) => column.name === "expires_at")) {
+    db.exec("ALTER TABLE import_previews ADD COLUMN expires_at TEXT;");
+  }
+
+  const notificationColumns = db.prepare("PRAGMA table_info(notifications)").all() as {
+    name: string;
+  }[];
+  if (!notificationColumns.some((column) => column.name === "delivery_attempt_at")) {
+    db.exec("ALTER TABLE notifications ADD COLUMN delivery_attempt_at TEXT;");
+  }
+
+  // Eén bevestigde indeling per periode. De index wordt alleen aangemaakt als de
+  // bestaande gegevens er al aan voldoen, zodat een oude database blijft werken.
+  const confirmedDuplicates = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM (
+         SELECT period_id FROM allocation_runs WHERE phase = 'confirmed'
+          GROUP BY period_id HAVING COUNT(*) > 1
+       )`,
+    )
+    .get() as { n: number } | undefined;
+  if (!confirmedDuplicates || Number(confirmedDuplicates.n) === 0) {
+    db.exec(
+      `CREATE UNIQUE INDEX IF NOT EXISTS one_confirmed_run_per_period
+         ON allocation_runs(period_id) WHERE phase = 'confirmed';`,
+    );
   }
 
   const insertRole = db.prepare(

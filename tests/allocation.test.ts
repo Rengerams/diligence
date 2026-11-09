@@ -200,4 +200,42 @@ describe("eerlijke indeling", () => {
     expect(result.assignments).toHaveLength(0);
     expect(result.ties).toHaveLength(3);
   });
+
+  it("laat een specifieke datum voorgaan, ook met garantie en minder geplande uitjes", () => {
+    const result = calculateAllocation(
+      input({
+        participants: [
+          person("a", { guaranteeRemaining: 2, plannedCount: 0 }),
+          person("b", { plannedCount: 3 }),
+        ],
+        signups: [
+          { id: "s1", participantId: "a", targetType: "period", outingId: null, seriesKey: "", groupMode: "alone", groupId: null },
+          { id: "s2", participantId: "b", targetType: "outing", outingId: "o1", seriesKey: "", groupMode: "alone", groupId: null },
+        ],
+      }),
+    );
+
+    expect(result.assignments.find((row) => row.outingId === "o1")?.participantId).toBe("b");
+    expect(result.assignments.some((row) => row.outingId === "o1" && row.participantId === "a")).toBe(false);
+  });
+
+  it("splitst een groepje met verschillende opgavevormen niet stilzwijgend", () => {
+    const result = calculateAllocation(
+      input({
+        outings: [
+          { id: "o1", date: "2026-11-10", capacity: 5, seriesKey: "", description: "Uitje 1", status: "planned" },
+        ],
+        participants: [person("a"), person("b")],
+        groups: [{ id: "g1", name: "Samen", memberIds: ["a", "b"] }],
+        signups: [
+          { id: "s1", participantId: "a", targetType: "period", outingId: null, seriesKey: "", groupMode: "with_group", groupId: "g1" },
+          { id: "s2", participantId: "b", targetType: "outing", outingId: "o1", seriesKey: "", groupMode: "with_group", groupId: "g1" },
+        ],
+      }),
+    );
+
+    expect(result.assignments).toHaveLength(0);
+    expect(result.ties.map((row) => row.participantId).sort()).toEqual(["a", "b"]);
+    expect(result.ties[0].reasonText).toContain("coördinator");
+  });
 });

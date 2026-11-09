@@ -196,7 +196,11 @@ export default async function AllocationPage({
             ) : null}
             {run.phase === "proposal" ? (
               <p className="small muted" style={{ marginTop: 10 }}>
-                Bevestigen zet de bellijst klaar. Er wordt nog geen e-mail verstuurd.
+                Bevestigen zet de bellijst klaar en verstuurt de uitslag meteen naar iedereen met
+                een e-mailadres.
+                {tieCount > 0
+                  ? ` Los eerst de ${tieCount === 1 ? "gelijke stand" : `${tieCount} gelijke standen`} op, anders blijven die plekken open.`
+                  : ""}
               </p>
             ) : null}
           </div>
@@ -260,6 +264,16 @@ export default async function AllocationPage({
                           <div key={row.id} className="person-line">
                             <span className="who">{row.first_name} {row.last_name}</span>
                             <span className="why">{row.reason_text}</span>
+                            {run.phase === "proposal" ? (
+                              <form action={assignManuallyAction}>
+                                <input type="hidden" name="run_id" value={run.id} />
+                                <input type="hidden" name="outing_id" value={outing.id} />
+                                <input type="hidden" name="participant_id" value={row.participant_id} />
+                                <button className="btn btn-secondary" type="submit">
+                                  Toch plaatsen
+                                </button>
+                              </form>
+                            ) : null}
                           </div>
                         ))}
                       </div>

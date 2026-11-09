@@ -41,6 +41,70 @@ function fail(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 
+function sortById<T extends { id: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+function isIsoDate(text: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const date = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === text;
+}
+
+/**
+ * Claimt één bericht voor verzending. Alleen de aanvraag die de rij als eerste
+ * op 'in behandeling' zet, verstuurt hem. Zo kan een tweede klik of een tweede
+ * medewerker hetzelfde bericht niet nog een keer versturen.
+ */
+function claimNotificationDelivery(notificationId: string): boolean {
+  const leaseBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const result = run(
+    `UPDATE notifications
+        SET delivery_attempt_at = ?
+      WHERE id = ? AND status IN ('queued', 'failed', 'demo')
+        AND (delivery_attempt_at IS NULL OR delivery_attempt_at < ?)`,
+    NOW(),
+    notificationId,
+    leaseBefore,
+  );
+  return result.changes === 1;
+}
+
+async function deliverNotifications(
+  ids: string[],
+): Promise<{ sent: number; demo: number; failed: number }> {
+  let sent = 0;
+  let demo = 0;
+  let failed = 0;
+  for (const id of ids) {
+    if (!claimNotificationDelivery(id)) continue;
+    const row = get<{ recipient: string; subject: string; body: string }>(
+      "SELECT recipient, subject, body FROM notifications WHERE id = ?",
+      id,
+    );
+    if (!row) continue;
+    const result = await sendEmail({
+      to: row.recipient,
+      subject: row.subject,
+      text: row.body,
+    });
+    run(
+      `UPDATE notifications
+          SET status = ?, sent_at = ?, provider_message_id = ?, error = ?
+        WHERE id = ?`,
+      result.status,
+      result.status === "failed" ? null : NOW(),
+      result.status === "sent" ? result.providerMessageId : null,
+      result.status === "failed" ? result.error : null,
+      id,
+    );
+    if (result.status === "sent") sent += 1;
+    else if (result.status === "demo") demo += 1;
+    else failed += 1;
+  }
+  return { sent, demo, failed };
+}
+
 export async function cleanupParticipantAction(form: FormData): Promise<void> {
   const user = await requirePermission("participants.manage");
   const participantId = value(form, "participant_id");
@@ -159,6 +223,9 @@ export async function saveSignups(form: FormData): Promise<void> {
   if (participant.status === "stopped") {
     fail(`/opgave?participantId=${participantId}`, "Een gestopte deelnemer kan geen opgave meer doen.");
   }
+  if (participant.archived_at) {
+    fail(`/opgave?participantId=${participantId}`, "Een gearchiveerde deelnemer kan geen opgave meer doen.");
+  }
   if (period.status !== "published") {
     fail(`/opgave?participantId=${participantId}`, "De opgave is voor deze periode niet open.");
   }
@@ -182,11 +249,17 @@ export async function saveSignups(form: FormData): Promise<void> {
   const groupId = groupMode === "with_group" && group ? group.id : null;
 
   const validOutingIds = new Set(
-    all<{ id: string }>("SELECT id FROM outings WHERE period_id = ?", periodId).map((row) => row.id),
+    all<{ id: string }>(
+      "SELECT id FROM outings WHERE period_id = ? AND status = 'planned'",
+      periodId,
+    ).map((row) => row.id),
   );
   for (const outingId of outingIds) {
     if (!validOutingIds.has(outingId)) {
-      fail(`/opgave?participantId=${participantId}`, "Een van de gekozen evenementen hoort niet bij deze periode.");
+      fail(
+        `/opgave?participantId=${participantId}`,
+        "Een van de gekozen evenementen hoort niet bij deze periode of is geannuleerd.",
+      );
     }
   }
 
@@ -229,15 +302,15 @@ export async function saveSignups(form: FormData): Promise<void> {
         );
       }
     }
-  });
 
-  writeAudit({
-    actor: user,
-    action: "signup.save",
-    entityType: "participant",
-    entityId: participantId,
-    summary: `Opgave van ${participant.first_name} ${participant.last_name} voor ${period.name} is opgeslagen.${afterDeadline ? ` Na de deadline, met reden: ${overrideReason}.` : ""}`,
-    after: { mode, groupMode: groupMode, outingIds, note, afterDeadline, overrideReason },
+    writeAudit({
+      actor: user,
+      action: "signup.save",
+      entityType: "participant",
+      entityId: participantId,
+      summary: `Opgave van ${participant.first_name} ${participant.last_name} voor ${period.name} is opgeslagen.${afterDeadline ? ` Na de deadline, met reden: ${overrideReason}.` : ""}`,
+      after: { mode, groupMode: groupMode, outingIds, note, afterDeadline, overrideReason },
+    });
   });
 
   revalidatePath("/opgave");
@@ -260,16 +333,20 @@ export async function calculateAllocationAction(form: FormData): Promise<void> {
   );
   if (existing) fail("/indeling", "Deze periode is al bevestigd.");
 
+  // De hele berekening leest en schrijft binnen één transactie. Zo kan een
+  // gelijktijdige wijziging van opgaven of capaciteit geen voorstel op een oude
+  // momentopname opleveren.
+  transaction(() => {
   const outings = all<Outing>(
     "SELECT * FROM outings WHERE period_id = ? ORDER BY date, start_time, id",
     periodId,
   );
   const participants = all<Participant>(
-    "SELECT * FROM participants WHERE archived_at IS NULL AND status <> 'stopped'",
+    "SELECT * FROM participants WHERE archived_at IS NULL AND status <> 'stopped' ORDER BY id",
   );
-  const groups = all<{ id: string; name: string }>('SELECT id, name FROM "groups"');
+  const groups = all<{ id: string; name: string }>('SELECT id, name FROM "groups" ORDER BY id');
   const groupMembers = all<{ group_id: string; participant_id: string }>(
-    "SELECT group_id, participant_id FROM group_members WHERE active = 1",
+    "SELECT group_id, participant_id FROM group_members WHERE active = 1 ORDER BY group_id, participant_id",
   );
   const signups = all<{
     id: string;
@@ -280,7 +357,9 @@ export async function calculateAllocationAction(form: FormData): Promise<void> {
     group_mode: "with_group" | "alone";
     group_id: string | null;
   }>(
-    "SELECT id, participant_id, target_type, outing_id, series_key, group_mode, group_id FROM signups WHERE period_id = ? AND status = 'active'",
+    `SELECT id, participant_id, target_type, outing_id, series_key, group_mode, group_id
+       FROM signups WHERE period_id = ? AND status = 'active'
+      ORDER BY id`,
     periodId,
   );
 
@@ -289,7 +368,8 @@ export async function calculateAllocationAction(form: FormData): Promise<void> {
      UNION ALL
      SELECT a.participant_id, o.date AS visit_date
        FROM attendance a JOIN outings o ON o.id = a.outing_id
-      WHERE a.present = 1`,
+      WHERE a.present = 1
+     ORDER BY participant_id, visit_date`,
   );
 
   const reference = new Date(`${period.deadline}T00:00:00Z`);
@@ -302,7 +382,8 @@ export async function calculateAllocationAction(form: FormData): Promise<void> {
        JOIN allocation_runs r ON r.id = a.run_id
        JOIN outings o ON o.id = a.outing_id
       WHERE r.phase = 'confirmed' AND a.status = 'assigned' AND o.status = 'planned'
-      GROUP BY a.participant_id`,
+      GROUP BY a.participant_id
+      ORDER BY a.participant_id`,
   );
   const plannedCounts = new Map(plannedRows.map((row) => [row.participant_id, Number(row.n)]));
 
@@ -348,14 +429,31 @@ export async function calculateAllocationAction(form: FormData): Promise<void> {
     })),
   };
 
+  // Canonieke volgorde: dezelfde inhoud geeft altijd dezelfde hash, ook als de
+  // database rijen in een andere volgorde teruggeeft.
+  const canonical = JSON.stringify({
+    outings: sortById(engineInput.outings),
+    participants: sortById(engineInput.participants),
+    groups: sortById(engineInput.groups).map((group) => ({
+      ...group,
+      memberIds: [...group.memberIds].sort(),
+    })),
+    signups: sortById(engineInput.signups),
+  });
+  const hash = createHash("sha256").update(canonical).digest("hex").slice(0, 24);
   const result = calculateAllocation(engineInput);
   const runId = `run-${randomUUID()}`;
-  const hash = createHash("sha256")
-    .update(JSON.stringify(engineInput))
-    .digest("hex")
-    .slice(0, 24);
 
-  transaction(() => {
+    // Binnen de schrijftransactie opnieuw controleren: zo kan een gelijktijdige
+    // bevestiging geen tweede voorstel meer opleveren.
+    const alreadyConfirmed = get<{ id: string }>(
+      "SELECT id FROM allocation_runs WHERE period_id = ? AND phase = 'confirmed' LIMIT 1",
+      periodId,
+    );
+    if (alreadyConfirmed) {
+      fail("/indeling", "Deze periode is al bevestigd.");
+    }
+
     run(
       `INSERT INTO allocation_runs
         (id, period_id, kind, phase, algorithm_version, input_hash, created_at, created_by)
@@ -426,15 +524,15 @@ export async function calculateAllocationAction(form: FormData): Promise<void> {
         rank: 0,
       });
     }
-  });
 
-  writeAudit({
-    actor: user,
-    action: "allocation.calculate",
-    entityType: "allocation_run",
-    entityId: runId,
-    summary: `Indelingsvoorstel berekend voor ${period.name}: ${result.stats.placed} geplaatst, ${result.stats.waitlisted} reserve, ${result.stats.ties} gelijke stand.`,
-    after: { runId, inputHash: hash, stats: result.stats },
+    writeAudit({
+      actor: user,
+      action: "allocation.calculate",
+      entityType: "allocation_run",
+      entityId: runId,
+      summary: `Indelingsvoorstel berekend voor ${period.name}: ${result.stats.placed} geplaatst, ${result.stats.waitlisted} reserve, ${result.stats.ties} gelijke stand.`,
+      after: { runId, inputHash: hash, stats: result.stats },
+    });
   });
 
   revalidatePath("/indeling");
@@ -447,6 +545,21 @@ export async function confirmAllocationAction(form: FormData): Promise<void> {
   const allocationRun = get<Run>("SELECT * FROM allocation_runs WHERE id = ?", runId);
   if (!allocationRun) fail("/indeling", "Voorstel niet gevonden.");
   if (allocationRun.phase === "confirmed") fail("/indeling", "Deze indeling is al bevestigd.");
+  if (allocationRun.kind !== "system") {
+    fail("/indeling", "Alleen het systeemvoorstel kan worden bevestigd.");
+  }
+  const latestProposal = get<{ id: string }>(
+    `SELECT id FROM allocation_runs
+      WHERE period_id = ? AND kind = 'system' AND phase = 'proposal'
+      ORDER BY created_at DESC, rowid DESC LIMIT 1`,
+    allocationRun.period_id,
+  );
+  if (!latestProposal || latestProposal.id !== runId) {
+    fail(
+      "/indeling",
+      "Dit voorstel is niet meer het laatste voorstel. Bereken het voorstel opnieuw en bevestig daarna.",
+    );
+  }
 
   const rows = all<{
     participant_id: string;
@@ -472,17 +585,23 @@ export async function confirmAllocationAction(form: FormData): Promise<void> {
 
   let queued = 0;
   let calls = 0;
+  const queuedIds: string[] = [];
 
-  transaction(() => {
-    run(
-      "UPDATE allocation_runs SET phase = 'confirmed', confirmed_at = ?, confirmed_by = ? WHERE id = ?",
-      NOW(),
-      user.id,
-      runId,
-    );
-    run("UPDATE periods SET status = 'closed' WHERE id = ?", allocationRun.period_id);
-    run("DELETE FROM call_tasks WHERE run_id = ?", runId);
-    run("DELETE FROM notifications WHERE run_id = ?", runId);
+  try {
+    transaction(() => {
+      const claim = run(
+        `UPDATE allocation_runs
+            SET phase = 'confirmed', confirmed_at = ?, confirmed_by = ?
+          WHERE id = ? AND phase = 'proposal'`,
+        NOW(),
+        user.id,
+        runId,
+      );
+      if (claim.changes !== 1) throw new Error("STALE_PROPOSAL");
+
+      run("UPDATE periods SET status = 'closed' WHERE id = ?", allocationRun.period_id);
+      run("DELETE FROM call_tasks WHERE run_id = ?", runId);
+      run("DELETE FROM notifications WHERE run_id = ?", runId);
 
     for (const row of rows) {
       if (row.status === "tie") continue;
@@ -513,12 +632,13 @@ export async function confirmAllocationAction(form: FormData): Promise<void> {
           "",
           `Wilt u geen e-mails meer ontvangen? Meld u af via ${unsubscribeUrl(token)}.`,
         ].join("\n");
+        const notificationId = `n-${randomUUID()}`;
         run(
           `INSERT INTO notifications
             (id, run_id, participant_id, outing_id, kind, recipient, subject, body,
              status, unsubscribe_token, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)`,
-          `n-${randomUUID()}`,
+          notificationId,
           runId,
           row.participant_id,
           row.outing_id,
@@ -530,6 +650,7 @@ export async function confirmAllocationAction(form: FormData): Promise<void> {
           NOW(),
         );
         queued += 1;
+        queuedIds.push(notificationId);
       }
 
       if (needsCall) {
@@ -548,17 +669,39 @@ export async function confirmAllocationAction(form: FormData): Promise<void> {
         );
         calls += 1;
       }
-    }
-  });
+      }
 
-  writeAudit({
-    actor: user,
-    action: "allocation.confirm",
-    entityType: "allocation_run",
-    entityId: runId,
-    summary: `De indeling is bevestigd: ${calls} beltaken en ${queued} e-mails klaargezet.`,
-    after: { calls, emails: queued },
-  });
+      writeAudit({
+        actor: user,
+        action: "allocation.confirm",
+        entityType: "allocation_run",
+        entityId: runId,
+        summary: `De indeling is bevestigd: ${calls} beltaken en ${queued} e-mails klaargezet.`,
+        after: { calls, emails: queued },
+      });
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "STALE_PROPOSAL") {
+      fail(
+        "/indeling",
+        "Dit voorstel is al bevestigd of niet meer actueel. Bereken het voorstel opnieuw.",
+      );
+    }
+    throw error;
+  }
+
+  // Bevestigen verstuurt de uitslag meteen naar iedereen met een e-mailadres.
+  const delivery = await deliverNotifications(queuedIds);
+  if (queuedIds.length) {
+    writeAudit({
+      actor: user,
+      action: "notification.send_all",
+      entityType: "allocation_run",
+      entityId: runId,
+      summary: `E-mails na bevestiging: ${delivery.sent} verzonden, ${delivery.demo} demo, ${delivery.failed} mislukt.`,
+      after: delivery,
+    });
+  }
 
   revalidatePath("/indeling");
   revalidatePath("/bellen");
@@ -578,6 +721,9 @@ export async function sendNotificationAction(form: FormData): Promise<void> {
   }>("SELECT id, recipient, subject, body, status FROM notifications WHERE id = ?", notificationId);
   if (!notification) fail("/berichten", "Bericht niet gevonden.");
   if (notification.status === "sent") fail("/berichten", "Dit bericht is al verzonden.");
+  if (!claimNotificationDelivery(notificationId)) {
+    fail("/berichten", "Dit bericht wordt al door iemand anders verzonden of is al verzonden.");
+  }
 
   const result = await sendEmail({
     to: notification.recipient,
@@ -625,6 +771,7 @@ export async function sendAllNotificationsAction(form: FormData): Promise<void> 
   let demo = 0;
   let failed = 0;
   for (const row of rows) {
+    if (!claimNotificationDelivery(row.id)) continue;
     const result = await sendEmail({ to: row.recipient, subject: row.subject, text: row.body });
     run(
       `UPDATE notifications
@@ -665,29 +812,40 @@ export async function assignManuallyAction(form: FormData): Promise<void> {
   const participant = get<Participant>("SELECT * FROM participants WHERE id = ?", participantId);
   const outing = get<Outing>("SELECT * FROM outings WHERE id = ?", outingId);
   if (!participant || !outing) fail("/indeling", "Deelnemer of evenement niet gevonden.");
+  if (outing.period_id !== allocationRun.period_id) {
+    fail("/indeling", "Dit evenement hoort niet bij de periode van dit voorstel.");
+  }
+  if (outing.status !== "planned") {
+    fail("/indeling", "Dit evenement is geannuleerd of afgerond. Kies een gepland evenement.");
+  }
+  if (participant.archived_at || participant.status === "stopped") {
+    fail("/indeling", "Een gearchiveerde of gestopte deelnemer kan niet worden ingedeeld.");
+  }
 
-  run(
-    `INSERT INTO allocations
-      (id, run_id, outing_id, participant_id, group_id, status, source, reason_code, reason_text, rank, created_at)
-     VALUES (?, ?, ?, ?, NULL, 'assigned', 'manual', 'manual_override', ?, 0, ?)
-     ON CONFLICT(run_id, outing_id, participant_id) DO UPDATE SET
-       status = 'assigned', source = 'manual', reason_code = 'manual_override',
-       reason_text = excluded.reason_text, rank = 0`,
-    `a-${randomUUID()}`,
-    runId,
-    outingId,
-    participantId,
-    "De coördinator heeft deze persoon handmatig ingedeeld.",
-    NOW(),
-  );
+  transaction(() => {
+    run(
+      `INSERT INTO allocations
+        (id, run_id, outing_id, participant_id, group_id, status, source, reason_code, reason_text, rank, created_at)
+       VALUES (?, ?, ?, ?, NULL, 'assigned', 'manual', 'manual_override', ?, 0, ?)
+       ON CONFLICT(run_id, outing_id, participant_id) DO UPDATE SET
+         status = 'assigned', source = 'manual', reason_code = 'manual_override',
+         reason_text = excluded.reason_text, rank = 0`,
+      `a-${randomUUID()}`,
+      runId,
+      outingId,
+      participantId,
+      "De coördinator heeft deze persoon handmatig ingedeeld.",
+      NOW(),
+    );
 
-  writeAudit({
-    actor: user,
-    action: "allocation.manual",
-    entityType: "allocation_run",
-    entityId: runId,
-    summary: `${participant.first_name} ${participant.last_name} is handmatig ingedeeld voor ${outing.description}.`,
-    after: { outingId, participantId },
+    writeAudit({
+      actor: user,
+      action: "allocation.manual",
+      entityType: "allocation_run",
+      entityId: runId,
+      summary: `${participant.first_name} ${participant.last_name} is handmatig ingedeeld voor ${outing.description}.`,
+      after: { outingId, participantId },
+    });
   });
 
   revalidatePath("/indeling");
@@ -828,6 +986,21 @@ export async function createOutingAction(form: FormData): Promise<void> {
     fail("/uitjes/nieuw", "De eindtijd moet na de begintijd liggen.");
   }
 
+  const period = get<Period>("SELECT * FROM periods WHERE id = ?", periodId);
+  if (!period) fail("/uitjes/nieuw", "Periode niet gevonden.");
+  if (!["draft", "published"].includes(period.status)) {
+    fail(
+      "/uitjes/nieuw",
+      "In een afgesloten of gearchiveerde periode kun je geen evenement toevoegen.",
+    );
+  }
+  if (!isIsoDate(date)) {
+    fail("/uitjes/nieuw", "De datum klopt niet. Gebruik het formaat jjjj-mm-dd.");
+  }
+  if (date < period.start_date || date > period.end_date) {
+    fail("/uitjes/nieuw", `De datum valt buiten de periode ${period.name}.`);
+  }
+
   const seriesName = value(form, "series_name");
   const seriesKey = seriesName
     ? `series-${seriesName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`
@@ -907,15 +1080,52 @@ export async function updateCapacityAction(form: FormData): Promise<void> {
   if (!Number.isFinite(capacity) || capacity < 1 || capacity > 100) {
     fail(`/uitjes/${outingId}`, "De capaciteit moet tussen 1 en 100 liggen.");
   }
-  run("UPDATE outings SET capacity = ? WHERE id = ?", capacity, outingId);
-  writeAudit({
-    actor: user,
-    action: "outing.capacity",
-    entityType: "outing",
-    entityId: outingId,
-    summary: `Capaciteit van ${outing.description} is gewijzigd van ${outing.capacity} naar ${capacity}.`,
-    before: { capacity: outing.capacity },
-    after: { capacity },
+  let waiting = 0;
+
+  transaction(() => {
+    run("UPDATE outings SET capacity = ? WHERE id = ?", capacity, outingId);
+
+    // Meer plekken terwijl er mensen op de reservelijst staan: de coördinator
+    // moet bellen. Daarom komt er een melding, niet alleen een hoger getal.
+    if (capacity > outing.capacity) {
+      const confirmedRun = get<Run>(
+        `SELECT * FROM allocation_runs
+          WHERE period_id = ? AND phase = 'confirmed'
+          ORDER BY confirmed_at DESC LIMIT 1`,
+        outing.period_id,
+      );
+      if (confirmedRun) {
+        waiting =
+          get<{ n: number }>(
+            `SELECT COUNT(*) AS n FROM allocations
+              WHERE run_id = ? AND outing_id = ? AND status = 'waitlist'`,
+            confirmedRun.id,
+            outingId,
+          )?.n ?? 0;
+        if (waiting > 0) {
+          run(
+            `INSERT INTO alerts
+               (id, type, outing_id, participant_id, message, status, created_by, created_at)
+             VALUES (?, 'free_spot', ?, NULL, ?, 'open', ?, ?)`,
+            `alert-${randomUUID()}`,
+            outingId,
+            `Er ${waiting === 1 ? "staat" : "staan"} ${waiting} ${waiting === 1 ? "persoon" : "personen"} op de reservelijst voor ${outing.description}. Er ${waiting === 1 ? "is" : "zijn"} nu extra plekken; bel ${waiting === 1 ? "deze persoon" : "deze personen"}.`,
+            user.id,
+            NOW(),
+          );
+        }
+      }
+    }
+
+    writeAudit({
+      actor: user,
+      action: "outing.capacity",
+      entityType: "outing",
+      entityId: outingId,
+      summary: `Capaciteit van ${outing.description} is gewijzigd van ${outing.capacity} naar ${capacity}.${waiting > 0 ? ` ${waiting} ${waiting === 1 ? "persoon staat" : "personen staan"} op de reservelijst; melding aangemaakt.` : ""}`,
+      before: { capacity: outing.capacity },
+      after: { capacity, waiting },
+    });
   });
   revalidatePath(`/uitjes/${outingId}`);
   redirect(`/uitjes/${outingId}?ok=1`);
@@ -1277,14 +1487,16 @@ export async function previewExcelProgramAction(form: FormData): Promise<void> {
   }
 
   const id = `preview-${randomUUID()}`;
+  const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
   run(
-    "INSERT INTO import_previews (id, period_id, created_at, created_by, file_name, payload) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO import_previews (id, period_id, created_at, created_by, file_name, payload, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     id,
     period.id,
     NOW(),
     user.id,
     file.name,
     JSON.stringify(parsed),
+    expiresAt,
   );
   redirect(`/uitjes/import/excel?preview=${id}`);
 }
@@ -1292,11 +1504,30 @@ export async function previewExcelProgramAction(form: FormData): Promise<void> {
 export async function commitExcelProgramAction(form: FormData): Promise<void> {
   const user = await requirePermission("program.manage");
   const previewId = value(form, "preview_id");
-  const preview = get<{ id: string; period_id: string; payload: string; file_name: string }>(
-    "SELECT id, period_id, payload, file_name FROM import_previews WHERE id = ?",
+  const preview = get<{
+    id: string;
+    period_id: string;
+    payload: string;
+    file_name: string;
+    created_by: string | null;
+    expires_at: string | null;
+  }>(
+    "SELECT id, period_id, payload, file_name, created_by, expires_at FROM import_previews WHERE id = ?",
     previewId,
   );
   if (!preview) fail("/uitjes/import/excel", "Controle niet gevonden. Upload het bestand opnieuw.");
+  // Een controle hoort bij de medewerker die hem maakte en verloopt na twee uur.
+  if (preview.created_by !== user.id) {
+    fail("/uitjes/import/excel", "Deze controle is van iemand anders. Upload het bestand zelf opnieuw.");
+  }
+  if (preview.expires_at && preview.expires_at < NOW()) {
+    fail("/uitjes/import/excel", "Deze controle is verlopen. Upload het bestand opnieuw.");
+  }
+  const period = get<Period>("SELECT * FROM periods WHERE id = ?", preview.period_id);
+  if (!period) fail("/uitjes/import/excel", "De periode van deze import bestaat niet meer.");
+  if (!["draft", "published"].includes(period.status)) {
+    fail("/uitjes/import/excel", "Deze periode is afgesloten; importeren kan niet meer.");
+  }
   const parsed = JSON.parse(preview.payload) as {
     rows: {
       date: string;
@@ -1312,6 +1543,21 @@ export async function commitExcelProgramAction(form: FormData): Promise<void> {
     }[];
   };
   if (!parsed.rows?.length) fail("/uitjes/import/excel", "Er staan geen evenementen in deze controle.");
+
+  for (const row of parsed.rows) {
+    if (!isIsoDate(row.date) || row.date < period.start_date || row.date > period.end_date) {
+      fail(
+        "/uitjes/import/excel",
+        `De datum ${row.date} klopt niet of valt buiten de periode ${period.name}. Upload het bestand opnieuw.`,
+      );
+    }
+    if (!Number.isInteger(row.capacity) || row.capacity < 1 || row.capacity > 100) {
+      fail("/uitjes/import/excel", `De capaciteit bij ${row.date} klopt niet.`);
+    }
+    if (!(row.end_time > row.start_time)) {
+      fail("/uitjes/import/excel", `De tijden bij ${row.date} kloppen niet.`);
+    }
+  }
 
   const batchId = `imp-${randomUUID()}`;
   const created: string[] = [];
@@ -1352,7 +1598,14 @@ export async function commitExcelProgramAction(form: FormData): Promise<void> {
       user.id,
       JSON.stringify(created),
     );
-    run("DELETE FROM import_previews WHERE id = ?", previewId);
+    const consumed = run(
+      "DELETE FROM import_previews WHERE id = ? AND created_by = ?",
+      previewId,
+      user.id,
+    );
+    if (consumed.changes !== 1) {
+      fail("/uitjes/import/excel", "Deze controle is al gebruikt. Upload het bestand opnieuw.");
+    }
   });
 
   writeAudit({
@@ -1498,43 +1751,45 @@ export async function assignVehiclesAutoAction(form: FormData): Promise<void> {
   const outing = get<Outing>("SELECT * FROM outings WHERE id = ?", outingId);
   if (!outing) fail("/uitjes", "Evenement niet gevonden.");
 
-  const available = all<{ id: string; name: string; seats: number; license_plate: string }>(
-    `SELECT v.id, v.name, v.seats, v.license_plate
-       FROM vehicles v
-      WHERE v.active = 1 AND v.archived_at IS NULL
-        AND NOT EXISTS (
-          SELECT 1 FROM outing_vehicles ov
-           WHERE ov.vehicle_id = v.id AND ov.service_date = ? AND ov.outing_id <> ?
-        )
-      ORDER BY v.name`,
-    outing.date,
-    outingId,
-  );
+  type AvailableVehicle = { id: string; name: string; seats: number; license_plate: string };
+  let best: AvailableVehicle[] = [];
 
-  let best: typeof available = [];
-  let bestSurplus = Number.POSITIVE_INFINITY;
-  let bestCount = Number.POSITIVE_INFINITY;
-  const total = 1 << available.length;
-  for (let mask = 1; mask < total; mask += 1) {
-    const combination = available.filter((_, index) => (mask & (1 << index)) !== 0);
-    const seats = combination.reduce((sum, vehicle) => sum + vehicle.seats, 0);
-    if (seats < outing.capacity) continue;
-    const surplus = seats - outing.capacity;
-    if (
-      surplus < bestSurplus ||
-      (surplus === bestSurplus && combination.length < bestCount)
-    ) {
-      best = combination;
-      bestSurplus = surplus;
-      bestCount = combination.length;
-    }
-  }
-
-  if (best.length === 0) {
-    fail(`/uitjes/${outingId}`, "Er is geen combinatie van vrije voertuigen die bij de capaciteit past.");
-  }
-
+  // Beschikbaarheid en boeking in één transactie, zodat twee gelijktijdige
+  // verzoeken niet hetzelfde voertuig op dezelfde dag kunnen boeken.
   transaction(() => {
+    const available = all<AvailableVehicle>(
+      `SELECT v.id, v.name, v.seats, v.license_plate
+         FROM vehicles v
+        WHERE v.active = 1 AND v.archived_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM outing_vehicles ov
+             WHERE ov.vehicle_id = v.id AND ov.service_date = ? AND ov.outing_id <> ?
+          )
+        ORDER BY v.name`,
+      outing.date,
+      outingId,
+    );
+
+    let bestSurplus = Number.POSITIVE_INFINITY;
+    let bestCount = Number.POSITIVE_INFINITY;
+    const total = 1 << available.length;
+    for (let mask = 1; mask < total; mask += 1) {
+      const combination = available.filter((_, index) => (mask & (1 << index)) !== 0);
+      const seats = combination.reduce((sum, vehicle) => sum + vehicle.seats, 0);
+      if (seats < outing.capacity) continue;
+      const surplus = seats - outing.capacity;
+      if (
+        surplus < bestSurplus ||
+        (surplus === bestSurplus && combination.length < bestCount)
+      ) {
+        best = combination;
+        bestSurplus = surplus;
+        bestCount = combination.length;
+      }
+    }
+
+    if (best.length === 0) return;
+
     run("DELETE FROM outing_vehicles WHERE outing_id = ?", outingId);
     for (const vehicle of best) {
       run(
@@ -1550,16 +1805,20 @@ export async function assignVehiclesAutoAction(form: FormData): Promise<void> {
         NOW(),
       );
     }
+
+    writeAudit({
+      actor: user,
+      action: "outing.vehicles_auto",
+      entityType: "outing",
+      entityId: outingId,
+      summary: `Voertuigen automatisch gekoppeld aan ${outing.description}: ${best.map((vehicle) => vehicle.name).join(", ")}.`,
+      after: best.map((vehicle) => vehicle.id),
+    });
   });
 
-  writeAudit({
-    actor: user,
-    action: "outing.vehicles_auto",
-    entityType: "outing",
-    entityId: outingId,
-    summary: `Voertuigen automatisch gekoppeld aan ${outing.description}: ${best.map((vehicle) => vehicle.name).join(", ")}.`,
-    after: best.map((vehicle) => vehicle.id),
-  });
+  if (best.length === 0) {
+    fail(`/uitjes/${outingId}`, "Er is geen combinatie van vrije voertuigen die bij de capaciteit past.");
+  }
   revalidatePath(`/uitjes/${outingId}`);
   redirect(`/uitjes/${outingId}?ok=1`);
 }
@@ -1575,39 +1834,51 @@ export async function addVehicleToOutingAction(form: FormData): Promise<void> {
   );
   if (!outing || !vehicle) fail(`/uitjes/${outingId}`, "Evenement of voertuig niet gevonden.");
 
-  const booked = get<{ id: string }>(
-    "SELECT id FROM outing_vehicles WHERE vehicle_id = ? AND service_date = ? AND outing_id <> ?",
-    vehicleId,
-    outing.date,
-    outingId,
-  );
-  if (booked) fail(`/uitjes/${outingId}`, "Dit voertuig is op deze dag al voor een ander evenement geboekt.");
-
   try {
-    run(
-      `INSERT INTO outing_vehicles
-        (id, outing_id, vehicle_id, service_date, driver_id, seats_snapshot, plate_snapshot, created_at)
-       VALUES (?, ?, ?, ?, NULL, ?, ?, ?)`,
-      `ov-${randomUUID()}`,
-      outingId,
-      vehicleId,
-      outing.date,
-      vehicle.seats,
-      vehicle.license_plate,
-      NOW(),
-    );
-  } catch {
-    fail(`/uitjes/${outingId}`, "Dit voertuig is al aan dit evenement gekoppeld.");
-  }
+    transaction(() => {
+      const booked = get<{ id: string }>(
+        "SELECT id FROM outing_vehicles WHERE vehicle_id = ? AND service_date = ? AND outing_id <> ?",
+        vehicleId,
+        outing.date,
+        outingId,
+      );
+      if (booked) throw new Error("VEHICLE_BOOKED");
 
-  writeAudit({
-    actor: user,
-    action: "outing.vehicle_add",
-    entityType: "outing",
-    entityId: outingId,
-    summary: `Voertuig ${vehicle.name} is aan ${outing.description} toegevoegd.`,
-    after: { vehicleId },
-  });
+      run(
+        `INSERT INTO outing_vehicles
+          (id, outing_id, vehicle_id, service_date, driver_id, seats_snapshot, plate_snapshot, created_at)
+         VALUES (?, ?, ?, ?, NULL, ?, ?, ?)`,
+        `ov-${randomUUID()}`,
+        outingId,
+        vehicleId,
+        outing.date,
+        vehicle.seats,
+        vehicle.license_plate,
+        NOW(),
+      );
+
+      writeAudit({
+        actor: user,
+        action: "outing.vehicle_add",
+        entityType: "outing",
+        entityId: outingId,
+        summary: `Voertuig ${vehicle.name} is aan ${outing.description} toegevoegd.`,
+        after: { vehicleId },
+      });
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "VEHICLE_BOOKED") {
+      fail(
+        `/uitjes/${outingId}`,
+        "Dit voertuig is op deze dag al voor een ander evenement geboekt.",
+      );
+    }
+    if (message.includes("UNIQUE constraint failed")) {
+      fail(`/uitjes/${outingId}`, "Dit voertuig is al aan dit evenement gekoppeld.");
+    }
+    throw error;
+  }
   revalidatePath(`/uitjes/${outingId}`);
   redirect(`/uitjes/${outingId}?ok=1`);
 }
