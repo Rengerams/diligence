@@ -23,7 +23,8 @@ en problemen oplossen.
 
 | Soort hosting | Kan de app hierop? | Waarom |
 |---|---|---|
-| Gedeelde webhosting (Mini t/m Ultimate) | **Nee** | Daar draait alleen PHP in een LiteSpeed-webserver. Een Node.js-app moet als langdurig proces blijven draaien op een eigen poort, met een eigen databasebestand. Dat kan op shared hosting niet. Theory7 schrijft dit ook zelf in hun kennisbank. |
+| Gedeelde webhosting **met Node.js Selector** | **Ja, zie [`INSTALLATIE-DIRECTADMIN.md`](INSTALLATIE-DIRECTADMIN.md)** | Biedt het pakket "Setup Node.js App" met **Node.js 24**, dan draait de app daar als Node-proces achter de webserver, met de SQLite-database als bestand in je home-map. Geen VPS en geen extra kosten. |
+| Gedeelde webhosting zonder Node.js | **Nee** | Daar draait alleen PHP in een LiteSpeed-webserver. Een Node.js-app moet als langdurig proces blijven draaien, met een eigen databasebestand. Dat kan zonder Node.js-selector niet. Theory7 schrijft dit ook zelf in hun kennisbank. |
 | **VPS (Rebel V4 of groter)** | **Ja** | Je hebt root, je eigen poorten 80/443 en je kunt Docker draaien. Dit is de route in deze handleiding. |
 | Managed VPS (vanaf € 47,85) | Ja | Zelfde resultaat, maar Theory7 beheert de server. Vraag bij de bestelling om Docker en Ubuntu 24.04. |
 
@@ -585,8 +586,13 @@ docker stats --no-stream              # geheugen en CPU
 
 ## 16. Alternatief: zonder Docker
 
-Kan, maar het is meer werk en je moet Node.js zelf bijhouden. De app heeft
-**Node.js 24** nodig (voor `node:sqlite`) en een procesmanager.
+Let op: staat de app op een **gedeeld pakket met Node.js Selector**, gebruik dan
+[`INSTALLATIE-DIRECTADMIN.md`](INSTALLATIE-DIRECTADMIN.md). Dat is dezelfde
+gedachte als deze paragraaf, maar dan met het paneel als procesmanager.
+
+Kan ook op een eigen VPS, maar het is meer werk en je moet Node.js zelf
+bijhouden. De app heeft **Node.js 24** nodig (voor `node:sqlite`) en een
+procesmanager.
 
 ```bash
 apt install -y git curl

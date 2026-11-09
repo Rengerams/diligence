@@ -104,8 +104,11 @@ De productie-opstelling staat in [`docs/PRODUCTIE.md`](docs/PRODUCTIE.md): Docke
 Stap voor stap installeren op een eigen server bij Theory7 (op je eigen subdomein,
 bijvoorbeeld `app.jouwdomein.nl`):
 [`docs/INSTALLATIE-THEORY7.md`](docs/INSTALLATIE-THEORY7.md). Kort samengevat: dit
-is één Node.js-proces met een SQLite-bestand, dus het past op een VPS met Docker en
-niet op gedeelde webhosting. Echte deelnemers in een lege database zetten
+is één Node.js-proces met een SQLite-bestand, dus het past op een VPS met Docker.
+
+Heb je een **gedeeld hostingpakket met Node.js 24** (DirectAdmin → Setup Node.js
+App)? Dan kan het ook daar, zonder extra kosten: zie
+[`docs/INSTALLATIE-DIRECTADMIN.md`](docs/INSTALLATIE-DIRECTADMIN.md). Echte deelnemers in een lege database zetten
 (geen demo): zie § 12 van die handleiding.
 
 ```bash
@@ -155,6 +158,7 @@ data/                    lokale demo-database en screenshots (niet in git)
 | [`docs/WERKVERSIE.md`](docs/WERKVERSIE.md) | Wat er in deze werkversie zit, welke afwijkingen er zijn en wat de volgende stap is |
 | [`docs/PRODUCTIE.md`](docs/PRODUCTIE.md) | Hosting, TLS, back-up, restore, monitoring en de livegang-checklist |
 | [`docs/INSTALLATIE-THEORY7.md`](docs/INSTALLATIE-THEORY7.md) | Installatie op een VPS bij Theory7, DNS voor je eigen subdomein, HTTPS, back-ups en probleemoplossing |
+| [`docs/INSTALLATIE-DIRECTADMIN.md`](docs/INSTALLATIE-DIRECTADMIN.md) | Installatie op een gedeeld pakket via DirectAdmin → Setup Node.js App (Node.js 24) |
 
 ## Beveiliging en privacy
 
