@@ -107,9 +107,11 @@ bijvoorbeeld `app.jouwdomein.nl`):
 is één Node.js-proces met een SQLite-bestand, dus het past op een VPS met Docker.
 
 Heb je een **gedeeld hostingpakket met Node.js 24** (DirectAdmin → Setup Node.js
-App)? Dan kan het ook daar, zonder extra kosten: zie
-[`docs/INSTALLATIE-DIRECTADMIN.md`](docs/INSTALLATIE-DIRECTADMIN.md). Echte deelnemers in een lege database zetten
-(geen demo): zie § 12 van die handleiding.
+App)? Dan kan het ook daar, zonder extra kosten:
+[`docs/INSTALLATIE-DIRECTADMIN.md`](docs/INSTALLATIE-DIRECTADMIN.md).
+
+Echte deelnemers in een lege database zetten (geen demo): zie § 12 van
+`docs/INSTALLATIE-THEORY7.md`.
 
 ```bash
 cp .env.example .env.production   # vul echte waarden in
