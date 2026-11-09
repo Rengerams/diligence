@@ -1,9 +1,14 @@
-# Installatie op je eigen website (Theory7 + www.epacta.nl)
+# Installatie op een eigen server (Theory7 VPS)
 
 Deze handleiding zet de Diligence-app stap voor stap op een eigen server bij
-Theory7, zodat je hem op `www.epacta.nl` kunt testen. Alles wat je nodig hebt
-staat erin: server bestellen, DNS, code plaatsen, HTTPS, inloggen, back-ups en
-problemen oplossen.
+Theory7, zodat je hem op **je eigen subdomein** kunt testen. Alles wat je nodig
+hebt staat erin: server bestellen, DNS, code plaatsen, HTTPS, inloggen, back-ups
+en problemen oplossen.
+
+> **Over het adres.** Je test op een subdomein, bijvoorbeeld
+> `app.jouwdomein.nl`. Dat is in deze handleiding het voorbeeldadres; vervang het
+> overal door het subdomein dat je aanvraagt. Je huidige website blijft gewoon
+> staan en daar hoef je niets aan te veranderen.
 
 > **Eerst dit, want dit is de kern van je vraag.** Deze app is **geen losse
 > website met een aparte database**. Het is één Node.js-programma dat zelf de
@@ -26,24 +31,28 @@ Advies: **Rebel V4 unmanaged, € 9,95 per maand, Ubuntu 24.04**. Dat is ruim
 genoeg (4 CPU, 4 GB RAM, 100 GB SSD) voor deze app en voor testgebruik met een
 handvol vrijwilligers.
 
-Zet de app **eerst op een testadres** (bijvoorbeeld `test.epacta.nl`), niet meteen
-op `www.epacta.nl`. Zo blijft je huidige website bereikbaar terwijl je test.
+Zet de app op een **eigen subdomein** (bijvoorbeeld `app.jouwdomein.nl`). Zo blijft
+je huidige website bereikbaar terwijl je test. Je hoeft aan die website niets te
+veranderen.
 
 ---
 
 ## 2. Wat je nodig hebt
 
 - Een Theory7-account met een VPS (Rebel V4, unmanaged) en Ubuntu 24.04.
-- Toegang tot de DNS van `epacta.nl` (bij Theory7 of bij de partij waar het
-  domein nu staat).
+- Een gekozen subdomeinnaam, bijvoorbeeld `app`, `beheer` of `diligence`. Je
+  maakt hem in stap 2 aan bij de DNS van je domein; je hebt daar geen extra
+  hostingpakket voor nodig.
+- Toegang tot de DNS van je domein (bij Theory7 of bij de partij waar het domein
+  nu staat), zodat je een subdomein kunt toevoegen.
 - Een terminal op je eigen computer (macOS/Linux) of PuTTY (Windows).
 - Ongeveer 30 minuten.
 
 Afspraken in deze handleiding:
 
 - `JOUW-SERVER-IP` = het IP-adres van je VPS, bijvoorbeeld `203.0.113.10`.
-- `test.epacta.nl` = het adres waarop je test. Gebruik je meteen
-  `www.epacta.nl`, vervang die naam overal.
+- `app.jouwdomein.nl` = het subdomein waarop je test. Gebruik je een ander
+  subdomein, vervang die naam dan overal in deze handleiding.
 
 ---
 
@@ -66,28 +75,26 @@ Afspraken in deze handleiding:
 
 ---
 
-## 4. Stap 2 – DNS instellen voor epacta.nl
+## 4. Stap 2 – DNS instellen voor je subdomein
 
 Je hebt één A-record nodig dat naar de VPS wijst.
 
 | Type | Naam | Waarde | TTL |
 |---|---|---|---|
-| A | `test` (of `www`) | `JOUW-SERVER-IP` | 300 |
-| A | `@` (alleen als je ook `epacta.nl` zonder www wilt) | `JOUW-SERVER-IP` | 300 |
+| A | `app` (jouw gekozen subdomein) | `JOUW-SERVER-IP` | 300 |
 
 - Staat het domein bij Theory7? Dan doe je dit in het DNS-beheer van het
   controlepaneel.
-- Staat het domein ergens anders? Pas de A-records daar aan.
+- Staat het domein ergens anders? Voeg het A-record daar toe.
+- Je hoofddomein en `www` laat je ongemoeid; die blijven naar je huidige website
+  wijzen.
 - Controleren of het al werkt (kan tot een paar uur duren):
 
   ```bash
-  dig +short test.epacta.nl
+  dig +short app.jouwdomein.nl
   ```
 
   Je moet `JOUW-SERVER-IP` zien.
-
-> Laat `www.epacta.nl` voorlopig naar je huidige website wijzen. Je test eerst op
-> `test.epacta.nl` en wisselt pas om als alles werkt (stap 10).
 
 ---
 
@@ -188,8 +195,8 @@ nano .env.production
 Vul dit in (vervang de voorbeelden):
 
 ```ini
-DOMAIN=test.epacta.nl
-APP_URL=https://test.epacta.nl
+DOMAIN=app.jouwdomein.nl
+APP_URL=https://app.jouwdomein.nl
 
 COOKIE_SECURE=true
 ENFORCE_2FA=true
@@ -197,13 +204,13 @@ SESSION_IDLE_MINUTES=60
 RATE_LIMIT_SECRET=uitkomst-van-de-eerste-openssl-opdracht
 
 # Eerste beheerder. Alleen nodig bij een lege database.
-SEED_ADMIN_EMAIL=jij@epacta.nl
+SEED_ADMIN_EMAIL=jij@jouwdomein.nl
 SEED_ADMIN_NAME=Beheerder
 SEED_ADMIN_PASSWORD=kies-een-lang-wachtwoord
 SEED_DEMO_DATA=false
 
 BREVO_API_KEY=
-EMAIL_FROM=info@epacta.nl
+EMAIL_FROM=info@jouwdomein.nl
 EMAIL_FROM_NAME=Stichting Diligence Almere
 
 BACKUP_KEY=uitkomst-van-de-tweede-openssl-opdracht
@@ -215,7 +222,7 @@ Wat betekenen de belangrijkste regels?
 
 | Regel | Betekenis |
 |---|---|
-| `DOMAIN` | Het adres dat Caddy gebruikt. Meerdere namen mogen, gescheiden door een komma: `DOMAIN=www.epacta.nl, epacta.nl`. |
+| `DOMAIN` | Het adres dat Caddy gebruikt. Meerdere namen mogen, gescheiden door een komma: `DOMAIN=app.jouwdomein.nl, beheer.jouwdomein.nl`. |
 | `APP_URL` | Volledige URL met `https://`, gebruikt in afmeldlinks van e-mails. |
 | `COOKIE_SECURE` | `true` zodra je via HTTPS werkt. |
 | `ENFORCE_2FA` | `true` verplicht tweestapsverplichting voor de beheerder. |
@@ -265,13 +272,13 @@ Verwacht antwoord:
 {"status":"ok","database":"ok","timestamp":"..."}
 ```
 
-Open nu `https://test.epacta.nl` in je browser. Het certificaat wordt automatisch
+Open nu `https://app.jouwdomein.nl` in je browser. Het certificaat wordt automatisch
 aangevraagd zodra DNS goed staat.
 
 - Duurt het laden lang of krijg je een certificaatfout? Wacht twee minuten en
   herlaad. Kijk daarna in `docker compose logs --tail=50 caddy`.
 - Krijg je "connection refused"? Dan wijst DNS nog niet naar de server
-  (`dig +short test.epacta.nl`) of is poort 80/443 dicht (stap 3).
+  (`dig +short app.jouwdomein.nl`) of is poort 80/443 dicht (stap 3).
 
 ### Testen zonder domein
 
@@ -283,7 +290,7 @@ geen HTTPS. Gebruik dit alleen om even te kijken, niet om mee te werken.
 
 ## 10. Stap 8 – Eerste keer inloggen
 
-1. Open `https://test.epacta.nl`.
+1. Open `https://app.jouwdomein.nl`.
 2. Log in met `SEED_ADMIN_EMAIL` en `SEED_ADMIN_PASSWORD`.
 3. Ga naar **Mijn account → Beveiliging** en stel tweestapsverificatie in met een
    authenticator-app. Bewaar de herstelcodes op papier, buiten de server.
@@ -340,38 +347,41 @@ docker compose --env-file .env.production run --rm app \
 docker compose --env-file .env.production run --rm app \
   sh -c 'mv /app/data/diligence.db /app/data/diligence.db.oud-$(date +%F) && mv /app/data/restored.db /app/data/diligence.db'
 docker compose start app
-curl -s https://test.epacta.nl/api/health
+curl -s https://app.jouwdomein.nl/api/health
 ```
 
 Het restore-script controleert de back-up op schade voordat hij iets terugzet.
 
 ---
 
-## 12. Stap 10 – Omwisselen naar www.epacta.nl
+## 12. Stap 10 – Later een ander adres gebruiken (optioneel)
 
-Pas als testen klaar zijn:
+Je kunt op het testsubdomein blijven werken zolang je wilt. Wil je de app later
+op een ander (sub)domein zetten, dan is dat alleen een kwestie van het adres
+aanpassen:
 
-1. Zet in `.env.production`:
+1. Zet in `.env.production` de nieuwe naam. Meerdere namen mogen, gescheiden door
+   een komma:
 
    ```ini
-   DOMAIN=www.epacta.nl, epacta.nl
-   APP_URL=https://www.epacta.nl
+   DOMAIN=app.jouwdomein.nl, beheer.jouwdomein.nl
+   APP_URL=https://beheer.jouwdomein.nl
    ```
 
-2. Zet in de DNS de A-records van `www` **en** `@` naar `JOUW-SERVER-IP`
-   (verwijder eerst het oude `www`-record als dat naar je huidige website wijst).
-3. Herstart zodat Caddy de nieuwe namen en certificaten oppakt:
+2. Zet in de DNS een A-record voor de nieuwe naam naar `JOUW-SERVER-IP`.
+3. Herstart zodat Caddy de nieuwe naam en het certificaat oppakt:
 
    ```bash
    cd /opt/diligence
    docker compose --env-file .env.production up -d
    ```
 
-4. Open `https://www.epacta.nl` en controleer `/api/health`.
+4. Open het nieuwe adres en controleer `/api/health`.
 
-> **Let op:** je huidige website op `www.epacta.nl` is daarna niet meer bereikbaar
-> via dat adres. Wil je beide naast elkaar, laat de app dan op
-> `beheer.epacta.nl` staan en houd `www` voor de website.
+> **Let op:** een adres kan maar naar één ding wijzen. Wil je de app op je
+> hoofdomein of op `www` zetten terwijl daar nu je website staat, dan moet je
+> eerst kiezen welk van de twee daar komt te staan. Laat de app in dat geval
+> liever op een eigen subdomein zoals `beheer.jouwdomein.nl` staan.
 
 ---
 
@@ -407,7 +417,7 @@ docker compose --env-file .env.production up -d
 | Verschijnsel | Oorzaak en oplossing |
 |---|---|
 | `port is already allocated` bij het starten | Er draait al iets op poort 80/443 (bijvoorbeeld een oude webserver). `ss -tlnp \| grep -E ':80\|:443'` laat zien wat. Stop dat, of vraag Theory7 het te verwijderen. |
-| Certificaatfout of "not secure" | DNS wijst nog niet naar de server, of poort 80 is dicht. Controleer `dig +short test.epacta.nl` en `ufw status`. |
+| Certificaatfout of "not secure" | DNS wijst nog niet naar de server, of poort 80 is dicht. Controleer `dig +short app.jouwdomein.nl` en `ufw status`. |
 | App-container blijft `restarting` | Bekijk `docker compose logs --tail=80 app`. Vaak een typefout in `.env.production` of geen schrijfrechten op het datavolume. |
 | Inloggen lukt niet met je eigen e-mailadres | De database was al gevuld voordat je `SEED_ADMIN_*` instelde. Bestaande databases worden niet opnieuw ingevuld; begin opnieuw (§ 13) of log in met het bestaande account. |
 | "Te veel inlogpogingen" | De app blokkeert 10 pogingen per 15 minuten per e-mailadres/IP. Wacht 15 minuten. |
@@ -422,7 +432,7 @@ cd /opt/diligence
 docker compose ps                     # status
 docker compose logs -f app            # meelopen met de app
 docker compose logs --tail=100 caddy  # HTTPS-problemen
-curl -s https://test.epacta.nl/api/health
+curl -s https://app.jouwdomein.nl/api/health
 docker stats --no-stream              # geheugen en CPU
 ```
 
@@ -483,7 +493,7 @@ met Certbot. Bijwerken = `git pull && pnpm install --frozen-lockfile && pnpm bui
 
 ## 16. Checklist voordat je met vrijwilligers gaat testen
 
-- [ ] `https://test.epacta.nl` opent en `/api/health` zegt `ok`.
+- [ ] `https://app.jouwdomein.nl` opent en `/api/health` zegt `ok`.
 - [ ] Inloggen werkt met het beheerdersaccount uit `.env.production`.
 - [ ] Tweestapsverificatie is ingesteld en herstelcodes liggen buiten de server.
 - [ ] `docker compose ps` toont `healthy` en beide containers starten na een

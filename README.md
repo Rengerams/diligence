@@ -99,7 +99,8 @@ pnpm package:source  # schoon bronarchief zonder data, .next of cookies
 
 De productie-opstelling staat in [`docs/PRODUCTIE.md`](docs/PRODUCTIE.md): Docker Compose met de app en Caddy, automatisch HTTPS, een persistent SQLite-volume, healthcheck, automatische herstart, versleutelde back-ups en een restoreprocedure.
 
-Stap voor stap installeren op een eigen server bij Theory7 (voor `www.epacta.nl`):
+Stap voor stap installeren op een eigen server bij Theory7 (op je eigen subdomein,
+bijvoorbeeld `app.jouwdomein.nl`):
 [`docs/INSTALLATIE-THEORY7.md`](docs/INSTALLATIE-THEORY7.md). Kort samengevat: dit
 is één Node.js-proces met een SQLite-bestand, dus het past op een VPS met Docker en
 niet op gedeelde webhosting.
@@ -150,7 +151,7 @@ data/                    lokale demo-database en screenshots (niet in git)
 | [`docs/IMPORTSPECIFICATIE.md`](docs/IMPORTSPECIFICATIE.md) | Import, validatie, preview en undo |
 | [`docs/WERKVERSIE.md`](docs/WERKVERSIE.md) | Wat er in deze werkversie zit, welke afwijkingen er zijn en wat de volgende stap is |
 | [`docs/PRODUCTIE.md`](docs/PRODUCTIE.md) | Hosting, TLS, back-up, restore, monitoring en de livegang-checklist |
-| [`docs/INSTALLATIE-THEORY7.md`](docs/INSTALLATIE-THEORY7.md) | Installatie op een VPS bij Theory7, DNS voor `www.epacta.nl`, HTTPS, back-ups en probleemoplossing |
+| [`docs/INSTALLATIE-THEORY7.md`](docs/INSTALLATIE-THEORY7.md) | Installatie op een VPS bij Theory7, DNS voor je eigen subdomein, HTTPS, back-ups en probleemoplossing |
 
 ## Beveiliging en privacy
 
