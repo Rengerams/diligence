@@ -37,7 +37,6 @@ export default async function LoginPage({
               type="email"
               autoComplete="username"
               required
-              defaultValue={showDemo ? "coordinator@diligence.local" : ""}
             />
           </div>
           <div className="field" style={{ marginTop: 14 }}>
@@ -48,7 +47,6 @@ export default async function LoginPage({
               type="password"
               autoComplete="current-password"
               required
-              defaultValue={showDemo ? "demo1234" : ""}
             />
           </div>
           <button className="btn btn-primary" type="submit" style={{ width: "100%", marginTop: 20 }}>
@@ -58,14 +56,6 @@ export default async function LoginPage({
 
         {showDemo ? (
           <>
-            <div className="demo-box">
-              <strong>Demo-accounts</strong>
-              <div>Beheerder: <code>admin@diligence.local</code></div>
-              <div>Coördinator: <code>coordinator@diligence.local</code></div>
-              <div>Chauffeur: <code>chauffeur@diligence.local</code></div>
-              <div style={{ marginTop: 6 }}>Wachtwoord: <code>demo1234</code></div>
-            </div>
-
             <p className="footer-note">
               Deze omgeving gebruikt verzonnen demonstratiegegevens. Vul hier nooit echte
               persoonsgegevens in.

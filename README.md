@@ -9,11 +9,11 @@ Werkende demo van het beheersysteem voor de uitjes van Stichting Diligence Almer
 **Werkende demo (MVP), geen productieversie.** De applicatie draait, de hoofdflows zijn met een browser getest en de belangrijkste schermen zijn met axe gecontroleerd op toegankelijkheid. Echte persoonsgegevens horen hier nog niet in.
 
 - **URL:** <http://localhost:3100> (de server draait in deze sessie)
-- **Demo-accounts:**
-  - Beheerder: `admin@diligence.local`
-  - Coördinator: `coordinator@diligence.local`
-  - Chauffeur: `chauffeur@diligence.local`
-  - Wachtwoord: `demo1234`
+- **Demo-accounts** (staan bewust niet op het inlogscherm; ze bestaan alleen als
+  `SEED_DEMO_DATA` niet op `false` staat):
+  - Beheerder: `admin@diligence.local` — wachtwoord `demo1234`
+  - Coördinator: `coordinator@diligence.local` — wachtwoord `demo1234`
+  - Chauffeur: `chauffeur@diligence.local` — wachtwoord `demo1234`
 - Alle namen, telefoonnummers en uitjes zijn verzonnen.
 
 ## Wat werkt
