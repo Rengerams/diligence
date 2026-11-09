@@ -421,8 +421,30 @@ export function seedDatabase(db: DatabaseSync): void {
   const insertUser = db.prepare(
     "INSERT INTO users (id, name, email, password_hash, role, role_key, active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
   );
+  // Op een echte server zet je SEED_ADMIN_EMAIL en SEED_ADMIN_PASSWORD, zodat er
+  // geen account met het bekende demowachtwoord bestaat.
+  const adminEmail = (process.env.SEED_ADMIN_EMAIL || "admin@diligence.local")
+    .trim()
+    .toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "demo1234";
+  const adminName = process.env.SEED_ADMIN_NAME || "Beheerder Demo";
+  insertUser.run(
+    "u-admin",
+    adminName,
+    adminEmail,
+    hashPassword(adminPassword),
+    "admin",
+    "admin",
+    NOW,
+  );
+
+  // SEED_DEMO_DATA=false laat alleen het beheerdersaccount staan, zonder
+  // verzonnen deelnemers, uitjes en opgaven.
+  if (process.env.SEED_DEMO_DATA === "false") {
+    return;
+  }
+
   const password = hashPassword("demo1234");
-  insertUser.run("u-admin", "Beheerder Demo", "admin@diligence.local", password, "admin", "admin", NOW);
   insertUser.run("u-coordinator", "Coördinator Demo", "coordinator@diligence.local", password, "coordinator", "coordinator", NOW);
   insertUser.run("u-driver", "Chauffeur Demo", "chauffeur@diligence.local", password, "driver", "driver", NOW);
 

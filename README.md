@@ -99,6 +99,11 @@ pnpm package:source  # schoon bronarchief zonder data, .next of cookies
 
 De productie-opstelling staat in [`docs/PRODUCTIE.md`](docs/PRODUCTIE.md): Docker Compose met de app en Caddy, automatisch HTTPS, een persistent SQLite-volume, healthcheck, automatische herstart, versleutelde back-ups en een restoreprocedure.
 
+Stap voor stap installeren op een eigen server bij Theory7 (voor `www.epacta.nl`):
+[`docs/INSTALLATIE-THEORY7.md`](docs/INSTALLATIE-THEORY7.md). Kort samengevat: dit
+is één Node.js-proces met een SQLite-bestand, dus het past op een VPS met Docker en
+niet op gedeelde webhosting.
+
 ```bash
 cp .env.example .env.production   # vul echte waarden in
 docker compose --env-file .env.production up -d --build
@@ -110,11 +115,14 @@ De app heeft ingebouwde bescherming: securityheaders, login-rate-limiting, sessi
 **Back-up maken en testen:**
 
 ```bash
-openssl rand -base64 32 > /root/diligence-backup.key
-chmod 600 /root/diligence-backup.key
-BACKUP_KEY="$(cat /root/diligence-backup.key)" pnpm backup
-BACKUP_KEY="$(cat /root/diligence-backup.key)" pnpm restore backups/diligence-....db.enc data/restored.db
+openssl rand -base64 32          # zet de uitkomst als BACKUP_KEY in .env.production
+docker compose --env-file .env.production run --rm app node scripts/backup.mjs
+docker compose --env-file .env.production run --rm app \
+  node scripts/restore.mjs /app/backups/diligence-....db.enc /app/data/restored.db
 ```
+
+De back-up- en restore-scripts zitten in de container, dus je hebt geen Node.js of
+pnpm op de server nodig. Bewaar `BACKUP_KEY` buiten de server.
 
 ## Projectstructuur
 
@@ -142,6 +150,7 @@ data/                    lokale demo-database en screenshots (niet in git)
 | [`docs/IMPORTSPECIFICATIE.md`](docs/IMPORTSPECIFICATIE.md) | Import, validatie, preview en undo |
 | [`docs/WERKVERSIE.md`](docs/WERKVERSIE.md) | Wat er in deze werkversie zit, welke afwijkingen er zijn en wat de volgende stap is |
 | [`docs/PRODUCTIE.md`](docs/PRODUCTIE.md) | Hosting, TLS, back-up, restore, monitoring en de livegang-checklist |
+| [`docs/INSTALLATIE-THEORY7.md`](docs/INSTALLATIE-THEORY7.md) | Installatie op een VPS bij Theory7, DNS voor `www.epacta.nl`, HTTPS, back-ups en probleemoplossing |
 
 ## Beveiliging en privacy
 

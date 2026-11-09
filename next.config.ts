@@ -28,10 +28,17 @@ const securityHeaders = [
   },
 ];
 
+// De ontwikkelserver in de sandbox wordt via een proxy-hostnaam bezocht. Alleen
+// dan is die hostnaam extra toegestaan; buiten de sandbox verandert er niets.
+const previewOrigins =
+  process.env.BASE44_PREVIEW_MODE === "1" && process.env.BASE44_PUBLIC_HOST_SUFFIX
+    ? [`3000-${process.env.BASE44_PUBLIC_HOST_SUFFIX}`]
+    : [];
+
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
-  allowedDevOrigins: ["127.0.0.1", "localhost"],
+  allowedDevOrigins: ["127.0.0.1", "localhost", ...previewOrigins],
   serverExternalPackages: ["node:sqlite"],
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];

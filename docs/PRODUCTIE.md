@@ -105,17 +105,21 @@ Verwacht:
 
 De back-up maakt een consistente SQLite-snapshot met `VACUUM INTO`, versleutelt die met AES-256-GCM en bewaart het resultaat buiten de container.
 
+De back-up- en restore-scripts zitten in de app-container, dus je hebt geen Node.js of pnpm op de server nodig:
+
 ```bash
 cd /opt/diligence
-BACKUP_KEY="$(grep '^BACKUP_KEY=' .env.production | cut -d= -f2-)" pnpm backup
+docker compose --env-file .env.production run --rm app node scripts/backup.mjs
 ```
 
-Of maak een klein script `/usr/local/bin/diligence-backup` dat dezelfde opdracht uitvoert en de sleutel uit een root-only bestand leest.
+De back-ups komen in het volume `diligence_backups` (in de container
+`/app/backups`). Haal ze van de server met
+`docker compose cp app:/app/backups ./backups-van-server`.
 
 Aanbevolen cron (dagelijks 02:15):
 
 ```cron
-15 2 * * * cd /opt/diligence && set -a && . ./.env.production && set +a && pnpm backup >> /var/log/diligence-backup.log 2>&1
+15 2 * * * cd /opt/diligence && docker compose --env-file .env.production run --rm app node scripts/backup.mjs >> /var/log/diligence-backup.log 2>&1
 ```
 
 - Bewaar de back-up **offsite** in EU-objectopslag.
@@ -129,7 +133,8 @@ Aanbevolen cron (dagelijks 02:15):
 2. Pak de back-up uit naar een nieuw bestand:
 
    ```bash
-   BACKUP_KEY="..." pnpm restore backups/diligence-....db.enc data/restored.db
+   docker compose --env-file .env.production run --rm app \
+     node scripts/restore.mjs /app/backups/diligence-....db.enc /app/data/restored.db
    ```
 
 3. Controleer de integriteit (het script doet al `PRAGMA integrity_check`).
