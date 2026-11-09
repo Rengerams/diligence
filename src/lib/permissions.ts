@@ -3,7 +3,7 @@ export const PERMISSIONS = [
   { key: "participants.manage", label: "Deelnemers toevoegen en wijzigen" },
   { key: "groups.manage", label: "Groepjes beheren" },
   { key: "program.view", label: "Programma bekijken" },
-  { key: "program.manage", label: "Programma en uitjes beheren" },
+  { key: "program.manage", label: "Programma en evenementen beheren" },
   { key: "signups.manage", label: "Opgaven invoeren en wijzigen" },
   { key: "allocation.manage", label: "Indeling maken en bevestigen" },
   { key: "vehicles.view", label: "Voertuigen bekijken" },
@@ -14,7 +14,7 @@ export const PERMISSIONS = [
   { key: "feedback.manage", label: "Feedback van vrijwilligers afhandelen" },
   { key: "users.manage", label: "Gebruikers beheren" },
   { key: "roles.manage", label: "Rollen en rechten beheren" },
-  { key: "own.outings", label: "Eigen uitjes en daglijsten bekijken" },
+  { key: "own.outings", label: "Eigen evenementen en daglijsten bekijken" },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
@@ -59,7 +59,7 @@ export const BUILTIN_ROLES: RoleDefinition[] = [
   {
     key: "driver",
     name: "Chauffeur",
-    description: "Ziet alleen de eigen uitjes en de bijbehorende daglijst.",
+    description: "Ziet alleen de eigen evenementen en de bijbehorende daglijst.",
     permissions: ["own.outings"],
     isSystem: true,
   },

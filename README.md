@@ -9,11 +9,13 @@ Werkende demo van het beheersysteem voor de uitjes van Stichting Diligence Almer
 **Werkende demo (MVP), geen productieversie.** De applicatie draait, de hoofdflows zijn met een browser getest en de belangrijkste schermen zijn met axe gecontroleerd op toegankelijkheid. Echte persoonsgegevens horen hier nog niet in.
 
 - **URL:** <http://localhost:3100> (de server draait in deze sessie)
-- **Demo-accounts:**
-  - Beheerder: `admin@diligence.local`
-  - Coördinator: `coordinator@diligence.local`
-  - Chauffeur: `chauffeur@diligence.local`
-  - Wachtwoord: `demo1234`
+- **Demo-accounts** (staan bewust niet op het inlogscherm; ze bestaan alleen als
+  `SEED_DEMO_DATA` niet op `false` staat). Alleen voor lokaal ontwikkelen; in
+  productie weigert de app te starten zonder `SEED_ADMIN_EMAIL` en een sterk
+  `SEED_ADMIN_PASSWORD` en worden er nooit demo-accounts aangemaakt:
+  - Beheerder: `admin@diligence.local` — wachtwoord `demo1234`
+  - Coördinator: `coordinator@diligence.local` — wachtwoord `demo1234`
+  - Chauffeur: `chauffeur@diligence.local` — wachtwoord `demo1234`
 - Alle namen, telefoonnummers en uitjes zijn verzonnen.
 
 ## Wat werkt
@@ -71,7 +73,7 @@ pnpm start        # productie op http://localhost:3100
 
 De applicatie gebruikt voor deze demo een ingebouwde SQLite-database (`data/diligence.db`). Bij de eerste start worden demo-gegevens geladen. De productiearchitectuur in het plan gaat uit van PostgreSQL.
 
-**E-mail:** zonder `BREVO_API_KEY` blijft de e-mailwachtrij in demonstratiemodus; berichten worden klaargezet maar niet verstuurd. Met `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` en `APP_URL` wordt via Brevo verzonden. Zet in productie ook `COOKIE_SECURE=true` en `ENFORCE_2FA=true`. De sessie verloopt na 8 uur absoluut en na 60 minuten inactiviteit; `SESSION_IDLE_MINUTES` is instelbaar.
+**E-mail:** zonder `BREVO_API_KEY` blijft de e-mailwachtrij in demonstratiemodus; berichten worden klaargezet maar niet verstuurd. Met `BREVO_API_KEY`, `EMAIL_FROM`, `EMAIL_FROM_NAME` en `APP_URL` wordt via Brevo verzonden. Na het bevestigen van de indeling verstuurt de app de uitslag meteen naar iedereen met een e-mailadres; de wachtrij op `/berichten` blijft bestaan voor mislukte berichten. Zet in productie ook `COOKIE_SECURE=true` en `ENFORCE_2FA=true`. De sessie verloopt na 8 uur absoluut en na 60 minuten inactiviteit; `SESSION_IDLE_MINUTES` is instelbaar.
 
 **Schoon bronarchief:** `pnpm package:source` maakt `dist/diligence-source-<datum>.tar.gz` en op Windows ook een `.zip`, zonder `.next`, `data`, cookies, database, back-ups of oude zipbestanden. De browsercontroles zoeken automatisch Chrome/Chromium; zet `CHROME_PATH` als jouw browser op een andere plek staat.
 
@@ -99,6 +101,18 @@ pnpm package:source  # schoon bronarchief zonder data, .next of cookies
 
 De productie-opstelling staat in [`docs/PRODUCTIE.md`](docs/PRODUCTIE.md): Docker Compose met de app en Caddy, automatisch HTTPS, een persistent SQLite-volume, healthcheck, automatische herstart, versleutelde back-ups en een restoreprocedure.
 
+Stap voor stap installeren op een eigen server bij Theory7 (op je eigen subdomein,
+bijvoorbeeld `app.jouwdomein.nl`):
+[`docs/INSTALLATIE-THEORY7.md`](docs/INSTALLATIE-THEORY7.md). Kort samengevat: dit
+is één Node.js-proces met een SQLite-bestand, dus het past op een VPS met Docker.
+
+Heb je een **gedeeld hostingpakket met Node.js 24** (DirectAdmin → Setup Node.js
+App)? Dan kan het ook daar, zonder extra kosten:
+[`docs/INSTALLATIE-DIRECTADMIN.md`](docs/INSTALLATIE-DIRECTADMIN.md).
+
+Echte deelnemers in een lege database zetten (geen demo): zie § 12 van
+`docs/INSTALLATIE-THEORY7.md`.
+
 ```bash
 cp .env.example .env.production   # vul echte waarden in
 docker compose --env-file .env.production up -d --build
@@ -110,11 +124,14 @@ De app heeft ingebouwde bescherming: securityheaders, login-rate-limiting, sessi
 **Back-up maken en testen:**
 
 ```bash
-openssl rand -base64 32 > /root/diligence-backup.key
-chmod 600 /root/diligence-backup.key
-BACKUP_KEY="$(cat /root/diligence-backup.key)" pnpm backup
-BACKUP_KEY="$(cat /root/diligence-backup.key)" pnpm restore backups/diligence-....db.enc data/restored.db
+openssl rand -base64 32          # zet de uitkomst als BACKUP_KEY in .env.production
+docker compose --env-file .env.production run --rm app node scripts/backup.mjs
+docker compose --env-file .env.production run --rm app \
+  node scripts/restore.mjs /app/backups/diligence-....db.enc /app/data/restored.db
 ```
+
+De back-up- en restore-scripts zitten in de container, dus je hebt geen Node.js of
+pnpm op de server nodig. Bewaar `BACKUP_KEY` buiten de server.
 
 ## Projectstructuur
 
@@ -142,6 +159,8 @@ data/                    lokale demo-database en screenshots (niet in git)
 | [`docs/IMPORTSPECIFICATIE.md`](docs/IMPORTSPECIFICATIE.md) | Import, validatie, preview en undo |
 | [`docs/WERKVERSIE.md`](docs/WERKVERSIE.md) | Wat er in deze werkversie zit, welke afwijkingen er zijn en wat de volgende stap is |
 | [`docs/PRODUCTIE.md`](docs/PRODUCTIE.md) | Hosting, TLS, back-up, restore, monitoring en de livegang-checklist |
+| [`docs/INSTALLATIE-THEORY7.md`](docs/INSTALLATIE-THEORY7.md) | Installatie op een VPS bij Theory7, DNS voor je eigen subdomein, HTTPS, back-ups en probleemoplossing |
+| [`docs/INSTALLATIE-DIRECTADMIN.md`](docs/INSTALLATIE-DIRECTADMIN.md) | Installatie op een gedeeld pakket via DirectAdmin → Setup Node.js App (Node.js 24) |
 
 ## Beveiliging en privacy
 

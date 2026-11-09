@@ -27,7 +27,9 @@ const child = spawn(process.execPath, [server], {
   env: {
     ...process.env,
     PORT: process.env.PORT ?? "3100",
-    HOSTNAME: process.env.HOSTNAME ?? "0.0.0.0",
+    // Niet process.env.HOSTNAME gebruiken: op hostingpanelen (Passenger) staat
+    // daar de servernaam in, en dan kan de app niet aan een poort binden.
+    HOSTNAME: process.env.DILIGENCE_BIND_HOST ?? "0.0.0.0",
     DILIGENCE_DB_PATH:
       process.env.DILIGENCE_DB_PATH ?? path.join(root, "data", "diligence.db"),
   },

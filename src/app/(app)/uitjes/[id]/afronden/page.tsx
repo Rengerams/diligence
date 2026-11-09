@@ -27,7 +27,7 @@ export default async function AttendancePage({
           title="Aanwezigheid registreren"
           intro={`${outing.description} · ${formatDateLong(outing.date)}`}
           nextStep="Bevestig eerst de indeling."
-          actions={<BackLink href={`/uitjes/${outing.id}`}>Terug naar het uitje</BackLink>}
+          actions={<BackLink href={`/uitjes/${outing.id}`}>Terug naar het evenement</BackLink>}
         />
         <EmptyState title="Nog geen bevestigde indeling">
           Er is nog geen bevestigde indeling voor deze periode. Bevestig eerst de indeling.
@@ -65,16 +65,16 @@ export default async function AttendancePage({
       <PageHeader
         title="Aanwezigheid registreren"
         intro={`${outing.description} · ${formatDateLong(outing.date)} · ${outing.start_time}–${outing.end_time}`}
-        nextStep="Vink aan wie er echt mee was. Daarna wordt het uitje afgerond en telt de deelname mee voor de eerlijke indeling."
-        actions={<BackLink href={`/uitjes/${outing.id}`}>Terug naar het uitje</BackLink>}
+        nextStep="Vink aan wie er echt mee was. Daarna wordt het evenement afgerond en telt de deelname mee voor de eerlijke indeling."
+        actions={<BackLink href={`/uitjes/${outing.id}`}>Terug naar het evenement</BackLink>}
       />
 
       {outing.status === "completed" ? (
-        <Alert kind="info">Dit uitje is al afgerond. Je kunt de aanwezigheid nog corrigeren.</Alert>
+        <Alert kind="info">Dit evenement is al afgerond. Je kunt de aanwezigheid nog corrigeren.</Alert>
       ) : null}
 
       {assigned.length === 0 ? (
-        <EmptyState title="Niemand ingedeeld">Er zijn geen deelnemers aan dit uitje toegewezen.</EmptyState>
+        <EmptyState title="Niemand ingedeeld">Er zijn geen deelnemers aan dit evenement toegewezen.</EmptyState>
       ) : (
         <form action={saveAttendanceAction} className="card">
           <input type="hidden" name="outing_id" value={outing.id} />
@@ -106,7 +106,7 @@ export default async function AttendancePage({
             ))}
           </div>
           <div className="actions">
-            <button className="btn btn-primary" type="submit">Aanwezigheid opslaan en uitje afronden</button>
+            <button className="btn btn-primary" type="submit">Aanwezigheid opslaan en evenement afronden</button>
             <Link className="btn btn-secondary" href={`/uitjes/${outing.id}/daglijst`}>Daglijst</Link>
           </div>
         </form>

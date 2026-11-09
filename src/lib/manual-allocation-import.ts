@@ -88,7 +88,7 @@ export function parseManualAllocationCsv(text: string): ParsedManualAllocation {
   const nameIndex = at("naam", "deelnemer", "name");
   const phoneIndex = at("telefoon", "telefoonnummer", "phone");
   const dateIndex = at("datum", "date");
-  const descriptionIndex = at("omschrijving", "uitje", "description");
+  const descriptionIndex = at("omschrijving", "evenement", "description");
   const statusIndex = at("status", "indeling");
   const rankIndex = at("rang", "rank", "positie");
 

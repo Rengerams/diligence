@@ -164,8 +164,8 @@ export default async function ParticipantPage({
                     <div>
                       <div className="title">
                         {signup.target_type === "period"
-                          ? "Alle uitjes van de periode"
-                          : signup.description ?? "Uitje"}
+                          ? "Alle evenementen van de periode"
+                          : signup.description ?? "Evenement"}
                       </div>
                       <div className="sub">
                         {signup.date ? formatDate(signup.date) : "Hele periode"}
@@ -218,7 +218,7 @@ export default async function ParticipantPage({
                 {history.map((visit) => (
                   <div key={visit.id} className="person-line">
                     <span className="who">{formatDate(visit.visit_date)}</span>
-                    <span className="why">{visit.description || "Uitje"}</span>
+                    <span className="why">{visit.description || "Evenement"}</span>
                   </div>
                 ))}
               </div>

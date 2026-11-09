@@ -46,4 +46,24 @@ describe("Excel-programma-import", () => {
     expect(parsed.rows).toHaveLength(0);
     expect(parsed.errors[0].message).toContain("tijd");
   });
+
+  it("weigert een onmogelijke ISO-datum", async () => {
+    const buffer = await workbookBuffer([
+      ["Datum", "Tijd", "Omschrijving", "Prijs", "Capaciteit"],
+      ["2026-02-31", "13:00-17:00", "Tuincentrum", "5,00", "14"],
+    ]);
+    const parsed = await readExcelProgram(buffer, period);
+    expect(parsed.rows).toHaveLength(0);
+    expect(parsed.errors[0].message).toContain("datum");
+  });
+
+  it("gebruikt de standaardcapaciteit van de periode in plaats van 14", async () => {
+    const buffer = await workbookBuffer([
+      ["NOVEMBER"],
+      ["ma 02", "10:30-14:30", "Museum", "12,50", "", "", "", "ja"],
+    ]);
+    const parsed = await readExcelProgram(buffer, { ...period, default_capacity: 9 });
+    expect(parsed.errors).toHaveLength(0);
+    expect(parsed.rows[0].capacity).toBe(9);
+  });
 });

@@ -24,8 +24,8 @@ export default async function SignupPage({
 
   if (!period) {
     return (
-      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar uitjes</Link>}>
-        Er is nog geen actieve periode. Maak eerst een periode en uitjes aan.
+      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar evenementen</Link>}>
+        Er is nog geen actieve periode. Maak eerst een periode en evenementen aan.
       </EmptyState>
     );
   }
@@ -45,7 +45,7 @@ export default async function SignupPage({
       <>
         <PageHeader
           title="Telefonische opgave"
-          intro="Zoek eerst de deelnemer. Daarna zie je alle uitjes van de periode op één scherm."
+          intro="Zoek eerst de deelnemer. Daarna zie je alle evenementen van de periode op één scherm."
           nextStep="Zoek op naam of telefoonnummer en kies de juiste persoon."
         />
 
@@ -126,7 +126,7 @@ export default async function SignupPage({
       <PageHeader
         title={`Opgave: ${fullName(participant)}`}
         intro={`${formatPhone(participant.phone)} · ${participant.city || "Almere"}${group ? ` · groepje ${group.name}` : ""}`}
-        nextStep="Vink de uitjes aan of kies 'alle uitjes'. Controleer daarna de bevestigingsregel en sla op."
+        nextStep="Vink de evenementen aan of kies 'alle evenementen'. Controleer daarna de bevestigingsregel en sla op."
         actions={
           <>
             <Link className="btn btn-secondary" href="/opgave">Andere deelnemer</Link>
@@ -156,7 +156,7 @@ export default async function SignupPage({
           <div className="section-title" style={{ marginTop: 0 }}>
             <h2>Wat heeft deze persoon opgegeven?</h2>
             <Badge tone={allMode ? "accent" : "muted"}>
-              {allMode ? "Alle uitjes" : `${existing.length} gekozen`}
+              {allMode ? "Alle evenementen" : `${existing.length} gekozen`}
             </Badge>
           </div>
 
@@ -164,23 +164,23 @@ export default async function SignupPage({
             <label className="choice">
               <input type="radio" name="mode" value="specific" defaultChecked={!allMode} />
               <span>
-                <span className="title">Specifieke uitjes</span>
-                <span className="sub">Kies hieronder de uitjes waarvoor deze persoon belt.</span>
+                <span className="title">Specifieke evenementen</span>
+                <span className="sub">Kies hieronder de evenementen waarvoor deze persoon belt.</span>
               </span>
             </label>
             <label className="choice">
               <input type="radio" name="mode" value="all" defaultChecked={allMode} />
               <span>
-                <span className="title">Alle uitjes van deze periode</span>
+                <span className="title">Alle evenementen van deze periode</span>
                 <span className="sub">
-                  Eén plek per uniek uitje. Bij een reeks kiest het systeem één datum.
+                  Eén plek per uniek evenement. Bij een reeks kiest het systeem één datum.
                 </span>
               </span>
             </label>
           </div>
 
           <div className="section-title">
-            <h2>Uitjes</h2>
+            <h2>Evenementen</h2>
             <span className="small muted">Vink aan waarvoor de persoon meegaat</span>
           </div>
           <div className="choice-list">
@@ -258,10 +258,10 @@ export default async function SignupPage({
             </p>
             <div className="alert alert-info">
               {allMode
-                ? `${participant.first_name} ${participant.last_name} doet mee met alle uitjes van ${period.name}.`
+                ? `${participant.first_name} ${participant.last_name} doet mee met alle evenementen van ${period.name}.`
                 : selected.size
-                  ? `${participant.first_name} ${participant.last_name} is opgegeven voor ${selected.size} uitje${selected.size === 1 ? "" : "s"}.`
-                  : "Nog geen uitje gekozen."}
+                  ? `${participant.first_name} ${participant.last_name} is opgegeven voor ${selected.size} evenement${selected.size === 1 ? "" : "en"}.`
+                  : "Nog geen evenement gekozen."}
               {group ? " Het groepje gaat mee." : ""}
             </div>
           </div>
@@ -295,7 +295,7 @@ export default async function SignupPage({
                   return (
                     <div key={row.id} className="person-line">
                       <span className="who">
-                        {row.target_type === "period" ? "Alle uitjes" : outing?.description ?? "Uitje"}
+                        {row.target_type === "period" ? "Alle evenementen" : outing?.description ?? "Evenement"}
                       </span>
                       <span className="why">
                         {outing ? formatDate(outing.date) : "Hele periode"}

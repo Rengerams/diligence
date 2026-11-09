@@ -110,16 +110,20 @@ type Claim = Unit & {
   count: number;
   plannedCount: number;
   lastVisitDate: string | null;
+  /** Groepsleden hebben onderling verschillende opgaven: de coördinator beslist. */
+  needsDecision: boolean;
 };
 
 const REASON = {
   placed_specific: "Specifieke opgave; er was plek.",
   placed_flexible: "Flexibele opgave; deze datum had de meeste ruimte.",
   placed_guarantee: "Nieuwe deelnemer met startkans; er was plek.",
-  waitlist_capacity: "Het uitje is vol; op de reservelijst geplaatst.",
+  waitlist_capacity: "Het evenement is vol; op de reservelijst geplaatst.",
   waitlist_group: "Het groepje past niet in één keer; samen op de reservelijst.",
   waitlist_series: "Alle data van deze reeks zijn vol; op de reservelijst geplaatst.",
   tie: "Gelijke stand; de coördinator beslist.",
+  tie_conflict:
+    "Groepsleden hebben verschillende opgaven voor deze datum; de coördinator beslist.",
 } as const;
 
 function compareText(a: string, b: string): number {
@@ -191,7 +195,20 @@ export function calculateAllocation(input: AllocationInput): AllocationResult {
   const groupsById = new Map(input.groups.map((g) => [g.id, g]));
 
   const aloneSignups = input.signups.filter((s) => s.groupMode === "alone");
-  const specificSignups = input.signups.filter((s) => s.targetType === "outing");
+
+  // Opgavevormen per groepje en per eenheid. Verschillen die, dan beslist de
+  // coördinator; de motor splitst het groepje niet zelf (besluit O-10/F).
+  const groupUnitTargets = new Map<string, Set<string>>();
+  for (const signup of input.signups) {
+    if (signup.groupMode !== "with_group" || !signup.groupId) continue;
+    if (!groupsById.has(signup.groupId)) continue;
+    for (const unit of buildUnits(signup, input.outings)) {
+      const key = `${signup.groupId}|${[...unit.outingIds].sort(compareText).join(",")}`;
+      const set = groupUnitTargets.get(key) ?? new Set<string>();
+      set.add(unit.targetType);
+      groupUnitTargets.set(key, set);
+    }
+  }
 
   const claims: Claim[] = [];
   const seen = new Set<string>();
@@ -202,6 +219,7 @@ export function calculateAllocation(input: AllocationInput): AllocationResult {
       let memberIds: string[];
       let groupId: string | null = null;
       let groupName: string | null = null;
+      let needsDecision = false;
 
       if (signup.groupMode === "with_group" && signup.groupId) {
         const group = groupsById.get(signup.groupId);
@@ -209,20 +227,17 @@ export function calculateAllocation(input: AllocationInput): AllocationResult {
           groupId = group.id;
           groupName = group.name;
           memberIds = group.memberIds.filter((memberId) => {
-            // Een lid dat voor deze uitjes "Alleen" opgaf, doet niet mee in de groep.
-            const hasAlone = aloneSignups.some(
+            // Een lid dat voor deze evenementen "Alleen" opgaf, doet niet mee in de groep.
+            return !aloneSignups.some(
               (s) => s.participantId === memberId && overlaps(s, unit, outingsById),
             );
-            // Een lid met een eigen specifieke opgave voor dit uitje houdt die opgave.
-            const hasOwnSpecific = specificSignups.some(
-              (s) =>
-                s.participantId === memberId &&
-                s.id !== signup.id &&
-                s.outingId !== null &&
-                unit.outingIds.includes(s.outingId),
-            );
-            return !hasAlone && !hasOwnSpecific;
           });
+          // Heeft hetzelfde groepje voor deze eenheid verschillende opgavevormen,
+          // dan splitst de motor niet: de coördinator beslist (besluit O-10/F).
+          needsDecision =
+            (groupUnitTargets.get(
+              `${group.id}|${[...unit.outingIds].sort(compareText).join(",")}`,
+            )?.size ?? 0) > 1;
         } else {
           memberIds = [signup.participantId];
         }
@@ -267,14 +282,17 @@ export function calculateAllocation(input: AllocationInput): AllocationResult {
         count,
         plannedCount,
         lastVisitDate,
+        needsDecision,
       });
     }
   }
 
   claims.sort((a, b) => {
+    // R-01: een specifieke datum gaat altijd voor "alle uitjes", ongeacht
+    // garantie of hoe vaak iemand al meeging.
+    if (a.fixed !== b.fixed) return a.fixed ? -1 : 1;
     if (a.guaranteeOpen !== b.guaranteeOpen) return a.guaranteeOpen ? -1 : 1;
     if (a.plannedCount !== b.plannedCount) return a.plannedCount - b.plannedCount;
-    if (a.fixed !== b.fixed) return a.fixed ? -1 : 1;
     if (a.count !== b.count) return a.count - b.count;
     if (a.lastVisitDate !== b.lastVisitDate) {
       if (a.lastVisitDate === null) return -1;
@@ -295,7 +313,7 @@ export function calculateAllocation(input: AllocationInput): AllocationResult {
   const ties: AllocationTieEntry[] = [];
 
   // Eenvoudige, transparante gelijke-stand-detectie: exact dezelfde prioriteit,
-  // hetzelfde ene uitje en samen meer vraag dan plekken. De plekken blijven vrij.
+  // hetzelfde ene evenement en samen meer vraag dan plekken. De plekken blijven vrij.
   const tieGroups = new Map<string, Claim[]>();
   for (const claim of claims) {
     if (!claim.fixed || claim.outingIds.length !== 1) continue;
@@ -335,8 +353,33 @@ export function calculateAllocation(input: AllocationInput): AllocationResult {
     remaining.set(outingId, Math.max(0, capacity - demand));
   }
 
+  const decisionSeen = new Set<string>();
+  for (const claim of claims) {
+    if (!claim.needsDecision) continue;
+    const outingId = [...claim.outingIds].sort(compareText)[0];
+    const outing = outingId ? outingsById.get(outingId) : undefined;
+    if (!outing || outing.status !== "planned") continue;
+    for (const participantId of claim.memberIds) {
+      const key = `${participantId}:${outing.id}:decision`;
+      if (decisionSeen.has(key)) continue;
+      decisionSeen.add(key);
+      ties.push({
+        outingId: outing.id,
+        participantId,
+        groupId: claim.groupId,
+        status: "tie",
+        source: "system",
+        reasonCode: "tie",
+        reasonText: REASON.tie_conflict,
+      });
+    }
+  }
+
   for (const claim of claims) {
     if (tiedClaimKeys.has(claim.key)) continue;
+    // Een groepje met verschillende opgaven wordt niet automatisch gesplitst of
+    // geplaatst: de coördinator beslist (besluit O-10/F).
+    if (claim.needsDecision) continue;
 
     const candidates = claim.outingIds
       .map((id) => outingsById.get(id))

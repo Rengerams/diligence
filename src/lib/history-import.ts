@@ -78,7 +78,7 @@ export function parseHistoryCsv(text: string, today: string): ParsedHistory {
   const nameIndex = at("naam", "deelnemer", "name");
   const phoneIndex = at("telefoon", "telefoonnummer", "phone");
   const dateIndex = at("datum", "date");
-  const descriptionIndex = at("omschrijving", "uitje", "description");
+  const descriptionIndex = at("omschrijving", "evenement", "description");
 
   if (dateIndex < 0 || (nameIndex < 0 && phoneIndex < 0)) {
     return {

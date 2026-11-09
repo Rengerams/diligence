@@ -60,10 +60,10 @@ export default async function OutingsPage({
   return (
     <>
       <PageHeader
-        title="Uitjes en programma"
+        title="Evenementen en programma"
         intro={
           period
-            ? `Het programma van ${period.name}. Klik op een uitje voor de deelnemers, het vervoer en de daglijst.`
+            ? `Het programma van ${period.name}. Klik op een evenement voor de deelnemers, het vervoer en de daglijst.`
             : "Er is nog geen actieve periode."
         }
         nextStep={
@@ -73,13 +73,13 @@ export default async function OutingsPage({
                   ? "De deadline is verstreken; de indeling kan worden berekend."
                   : "Opgaven kunnen nog worden ingevoerd."
               }`
-            : "Maak eerst een periode aan voordat je uitjes toevoegt."
+            : "Maak eerst een periode aan voordat je evenementen toevoegt."
         }
         actions={
           isDriver ? null : (
             <>
               <Link className="btn btn-primary" href="/uitjes/nieuw">
-                Nieuw uitje
+                Nieuw evenement
               </Link>
               <Link className="btn btn-secondary" href="/uitjes/import">
                 Programma importeren
@@ -108,9 +108,9 @@ export default async function OutingsPage({
             </Badge>
           </div>
           <p className="muted" style={{ marginBottom: 0 }}>
-            {outings.length} uitjes · deadline {formatDate(period.deadline)}
+            {outings.length} evenementen · deadline {formatDate(period.deadline)}
             {allPeriodSignups > 0
-              ? ` · ${allPeriodSignups} opgaven voor alle uitjes`
+              ? ` · ${allPeriodSignups} opgaven voor alle evenementen`
               : ""}
           </p>
         </div>
@@ -118,7 +118,7 @@ export default async function OutingsPage({
 
       <div className="section-title">
         <h2>Programma</h2>
-        <span className="small muted">Inclusief opgaven voor alle uitjes</span>
+        <span className="small muted">Inclusief opgaven voor alle evenementen</span>
       </div>
 
       {!isDriver && categories.length ? (
@@ -139,18 +139,18 @@ export default async function OutingsPage({
 
       {!period || outings.length === 0 ? (
         <EmptyState
-          title={isDriver ? "Geen uitjes voor jou" : "Nog geen uitjes"}
+          title={isDriver ? "Geen evenementen voor jou" : "Nog geen evenementen"}
           action={
             isDriver ? null : (
               <Link className="btn btn-primary" href="/uitjes/nieuw">
-                Eerste uitje toevoegen
+                Eerste evenement toevoegen
               </Link>
             )
           }
         >
           {isDriver
-            ? "De coördinator heeft je nog niet aan een uitje gekoppeld."
-            : "Voeg een uitje toe of importeer het programma uit Excel/CSV."}
+            ? "De coördinator heeft je nog niet aan een evenement gekoppeld."
+            : "Voeg een evenement toe of importeer het programma uit Excel/CSV."}
         </EmptyState>
       ) : (
         <div className="list">

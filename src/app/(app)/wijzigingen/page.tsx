@@ -27,7 +27,7 @@ function actionLabel(action: string): string {
     "notification.send_all": "E-mailwachtrij verwerkt",
     "vehicle.create": "Voertuig toegevoegd",
     "vehicle.update": "Voertuig gewijzigd",
-    "outing.create": "Uitje toegevoegd",
+    "outing.create": "Evenement toegevoegd",
     "outing.capacity": "Capaciteit gewijzigd",
     "outing.vehicle_add": "Voertuig gekoppeld",
     "outing.vehicle_remove": "Voertuig verwijderd",

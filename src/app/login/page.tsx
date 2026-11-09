@@ -10,6 +10,9 @@ export default async function LoginPage({
   if (user) redirect(user.mfaVerified ? "/" : "/login/2fa");
 
   const { error } = await searchParams;
+  // Op een echte installatie (SEED_DEMO_DATA=false) staan er geen demo-accounts
+  // in de database, dus laten we ze ook niet op het inlogscherm zien.
+  const showDemo = process.env.SEED_DEMO_DATA !== "false";
 
   return (
     <main className="login-page">
@@ -17,7 +20,7 @@ export default async function LoginPage({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/logo-trim.png" alt="Logo Stichting Diligence Almere" />
         <h1>Diligence Beheer</h1>
-        <p className="tagline">De leukste uitjes voor Almeerse 55-plussers</p>
+        <p className="tagline">De leukste evenementen voor Almeerse 55-plussers</p>
 
         {error ? (
           <div className="alert alert-error" role="alert">
@@ -34,7 +37,6 @@ export default async function LoginPage({
               type="email"
               autoComplete="username"
               required
-              defaultValue="coordinator@diligence.local"
             />
           </div>
           <div className="field" style={{ marginTop: 14 }}>
@@ -45,7 +47,6 @@ export default async function LoginPage({
               type="password"
               autoComplete="current-password"
               required
-              defaultValue="demo1234"
             />
           </div>
           <button className="btn btn-primary" type="submit" style={{ width: "100%", marginTop: 20 }}>
@@ -53,18 +54,14 @@ export default async function LoginPage({
           </button>
         </form>
 
-        <div className="demo-box">
-          <strong>Demo-accounts</strong>
-          <div>Beheerder: <code>admin@diligence.local</code></div>
-          <div>Coördinator: <code>coordinator@diligence.local</code></div>
-          <div>Chauffeur: <code>chauffeur@diligence.local</code></div>
-          <div style={{ marginTop: 6 }}>Wachtwoord: <code>demo1234</code></div>
-        </div>
-
-        <p className="footer-note">
-          Deze omgeving gebruikt verzonnen demonstratiegegevens. Vul hier nooit echte
-          persoonsgegevens in.
-        </p>
+        {showDemo ? (
+          <>
+            <p className="footer-note">
+              Deze omgeving gebruikt verzonnen demonstratiegegevens. Vul hier nooit echte
+              persoonsgegevens in.
+            </p>
+          </>
+        ) : null}
       </div>
     </main>
   );

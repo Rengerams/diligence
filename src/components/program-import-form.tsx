@@ -67,7 +67,7 @@ export function ProgramImportForm({
           <div className="section-title" style={{ marginTop: 0 }}>
             <h2>Stap 2: controleer</h2>
             <span className="badge badge-muted">
-              {parsed.rows.length} uitjes · {parsed.errors.length} fouten · {parsed.warnings.length} waarschuwingen
+              {parsed.rows.length} evenementen · {parsed.errors.length} fouten · {parsed.warnings.length} waarschuwingen
             </span>
           </div>
 
@@ -82,7 +82,7 @@ export function ProgramImportForm({
             </div>
           ) : (
             <div className="alert alert-success">
-              Dit worden {parsed.rows.length} uitjes. Klopt dat? Controleer de lijst en klik op
+              Dit worden {parsed.rows.length} evenementen. Klopt dat? Controleer de lijst en klik op
               “Definitief opslaan”.
             </div>
           )}

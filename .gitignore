@@ -7,3 +7,6 @@ dist/
 .DS_Store
 tmp/
 .vite/
+.pnpm-store/
+.env.production
+.env.*.local

@@ -13,7 +13,7 @@ const NAV: {
   { href: "/", label: "Start" },
   { href: "/deelnemers", label: "Deelnemers", permission: "participants.view" },
   { href: "/groepjes", label: "Groepjes", permission: "groups.manage" },
-  { href: "/uitjes", label: "Uitjes", any: ["program.view", "own.outings"] },
+  { href: "/uitjes", label: "Evenementen", any: ["program.view", "own.outings"] },
   { href: "/locaties", label: "Locaties", permission: "program.manage" },
   { href: "/opgave", label: "Opgave", permission: "signups.manage" },
   { href: "/indeling", label: "Indeling", permission: "allocation.manage" },
@@ -40,7 +40,7 @@ export default async function AppLayout({
     return true;
   }).map((item) =>
     item.href === "/uitjes" && can(user, "own.outings") && !can(user, "program.view")
-      ? { ...item, label: "Mijn uitjes" }
+      ? { ...item, label: "Mijn evenementen" }
       : item,
   );
 
@@ -53,7 +53,7 @@ export default async function AppLayout({
             <img src="/brand/logo-trim.png" alt="Logo Stichting Diligence Almere" width={162} height={101} />
             <span className="brand-text">
               <strong>Diligence Beheer</strong>
-              <span>Uitjes voor 55-plussers in Almere</span>
+              <span>Evenementen voor 55-plussers in Almere</span>
             </span>
           </Link>
 

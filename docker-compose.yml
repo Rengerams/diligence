@@ -9,8 +9,10 @@ services:
       PORT: "3100"
       HOSTNAME: 0.0.0.0
       DILIGENCE_DB_PATH: /app/data/diligence.db
+      BACKUP_DIR: /app/backups
     volumes:
       - diligence_data:/app/data
+      - diligence_backups:/app/backups
     healthcheck:
       test:
         - CMD
@@ -41,5 +43,6 @@ services:
 
 volumes:
   diligence_data:
+  diligence_backups:
   caddy_data:
   caddy_config:

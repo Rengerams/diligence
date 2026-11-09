@@ -43,11 +43,11 @@ try {
   await page.fill("#description", `Testuitje ${suffix}`);
   await page.selectOption("#location_id", { label: `${locationName} · Almere` });
   await page.selectOption("#category_id", { label: categoryName });
-  await page.getByRole("button", { name: "Uitje opslaan" }).click();
+  await page.getByRole("button", { name: "Evenement opslaan" }).click();
   await page.waitForURL(/\/uitjes\/o-/);
   await page.getByText(locationName).first().waitFor();
   await page.getByText("Teststraat 1").first().waitFor();
-  console.log("Uitje koppelen aan locatie: ok");
+  console.log("Evenement koppelen aan locatie: ok");
 
   await page.goto(`${base}/uitjes?category=`, { waitUntil: "networkidle" });
   await page.locator(".badge", { hasText: categoryName }).first().waitFor();

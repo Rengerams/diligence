@@ -22,8 +22,9 @@ export default async function ImportParticipantsPage({
       {error ? <Alert kind="error">{error}</Alert> : null}
 
       <div className="alert alert-info">
-        Deze werkversie ondersteunt CSV zonder bezoekgeschiedenis. Gebruik verzonnen gegevens in
-        deze demo-omgeving.
+        Gebruik de kolomnamen uit het voorbeeldbestand. Bezoekgeschiedenis importeer je apart op{" "}
+        <a href="/deelnemers/geschiedenis">Bezoekgeschiedenis</a>. Werk met echte deelnemers alleen
+        op de productieserver, niet in de demo.
       </div>
 
       <ParticipantImportForm />

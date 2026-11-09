@@ -417,12 +417,71 @@ const signups: SignupSeed[] = [
   { id: "s-24", participantId: "p-14", targetType: "outing", outingId: "o-08", groupMode: "alone" },
 ];
 
+/**
+ * Fout in de eenmalige inrichting van een lege productiedatabase.
+ *
+ * Deze fout moet het opstarten tegenhouden: liever een app die niet start dan
+ * een productiesysteem met een bekend demowachtwoord.
+ */
+export class SeedConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SeedConfigurationError";
+  }
+}
+
 export function seedDatabase(db: DatabaseSync): void {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  // Op een echte server bestaat er nooit een standaardaccount. Zonder
+  // SEED_ADMIN_EMAIL en een sterk SEED_ADMIN_PASSWORD weigert de app te starten.
+  if (isProduction) {
+    const email = (process.env.SEED_ADMIN_EMAIL ?? "").trim();
+    const password = process.env.SEED_ADMIN_PASSWORD ?? "";
+    if (!email || !password) {
+      throw new SeedConfigurationError(
+        "De database is leeg. Zet SEED_ADMIN_EMAIL en SEED_ADMIN_PASSWORD in de omgeving om eenmalig een beheerder aan te maken.",
+      );
+    }
+    if (password.length < 12 || password === "demo1234") {
+      throw new SeedConfigurationError(
+        "SEED_ADMIN_PASSWORD moet minimaal 12 tekens zijn en mag niet het demowachtwoord zijn.",
+      );
+    }
+  }
+
   const insertUser = db.prepare(
     "INSERT INTO users (id, name, email, password_hash, role, role_key, active, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
   );
+  const adminEmail = (isProduction
+    ? (process.env.SEED_ADMIN_EMAIL as string)
+    : process.env.SEED_ADMIN_EMAIL || "admin@diligence.local"
+  )
+    .trim()
+    .toLowerCase();
+  const adminPassword = isProduction
+    ? (process.env.SEED_ADMIN_PASSWORD as string)
+    : process.env.SEED_ADMIN_PASSWORD || "demo1234";
+  const adminName =
+    process.env.SEED_ADMIN_NAME || (isProduction ? "Beheerder" : "Beheerder Demo");
+  insertUser.run(
+    "u-admin",
+    adminName,
+    adminEmail,
+    hashPassword(adminPassword),
+    "admin",
+    "admin",
+    NOW,
+  );
+
+  // In productie komen er nooit verzonnen deelnemers, evenementen of
+  // medewerkersaccounts in de database, ook niet als SEED_DEMO_DATA per ongeluk
+  // op true staat.
+  if (isProduction || process.env.SEED_DEMO_DATA === "false") {
+    return;
+  }
+
   const password = hashPassword("demo1234");
-  insertUser.run("u-admin", "Beheerder Demo", "admin@diligence.local", password, "admin", "admin", NOW);
   insertUser.run("u-coordinator", "Coördinator Demo", "coordinator@diligence.local", password, "coordinator", "coordinator", NOW);
   insertUser.run("u-driver", "Chauffeur Demo", "chauffeur@diligence.local", password, "driver", "driver", NOW);
 
@@ -578,9 +637,9 @@ export function seedDatabase(db: DatabaseSync): void {
   `);
   insertVehicle.run("v-01", "Busje 1", "12-ABC-3", "12ABC3", 7, "Mercedes, 7 gasten", NOW, NOW);
   insertVehicle.run("v-02", "Busje 2", "45-DEF-6", "45DEF6", 7, "Mercedes, 7 gasten", NOW, NOW);
-  insertVehicle.run("v-03", "Touringcar", "78-GHI-9", "78GHI9", 40, "Alleen bij grote uitjes", NOW, NOW);
+  insertVehicle.run("v-03", "Touringcar", "78-GHI-9", "78GHI9", 40, "Alleen bij grote evenementen", NOW, NOW);
 
-  // Laat de chauffeurdemo meteen één toegewezen uitje zien.
+  // Laat de chauffeurdemo meteen één toegewezen evenement zien.
   db.prepare(
     `INSERT INTO outing_vehicles
       (id, outing_id, vehicle_id, service_date, driver_id, seats_snapshot, plate_snapshot, created_at)
@@ -611,5 +670,5 @@ export function seedDatabase(db: DatabaseSync): void {
     INSERT INTO audit_log (at, actor_id, actor_name, action, entity_type, entity_id, summary, before_json, after_json)
     VALUES (?, 'u-admin', 'Beheerder Demo', 'system.seed', 'system', '', ?, NULL, NULL)
   `);
-  insertAudit.run(NOW, "Demonstratiegegevens geladen: 14 deelnemers, 9 uitjes en 24 opgaven.");
+  insertAudit.run(NOW, "Demonstratiegegevens geladen: 14 deelnemers, 9 evenementen en 24 opgaven.");
 }

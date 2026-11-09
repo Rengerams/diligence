@@ -31,10 +31,10 @@ export default async function NewOutingPage({
   return (
     <>
       <PageHeader
-        title="Nieuw uitje"
-        intro={`Dit uitje komt in de periode ${period.name}.`}
-        nextStep="Vul de datum, tijden, omschrijving en capaciteit in. Daarna kun je het uitje openen en het vervoer koppelen."
-        actions={<BackLink href="/uitjes">Terug naar uitjes</BackLink>}
+        title="Nieuw evenement"
+        intro={`Dit evenement komt in de periode ${period.name}.`}
+        nextStep="Vul de datum, tijden, omschrijving en capaciteit in. Daarna kun je het evenement openen en het vervoer koppelen."
+        actions={<BackLink href="/uitjes">Terug naar evenementen</BackLink>}
       />
 
       {error ? <Alert kind="error">{error}</Alert> : null}
@@ -110,7 +110,7 @@ export default async function NewOutingPage({
           <div className="field">
             <label htmlFor="series_name">Reeks (optioneel)</label>
             <input id="series_name" name="series_name" placeholder="bijv. Pannenkoekhuis" />
-            <span className="help">Gebruik dezelfde naam voor hetzelfde uitje op meerdere data.</span>
+            <span className="help">Gebruik dezelfde naam voor hetzelfde evenement op meerdere data.</span>
           </div>
           <div className="field full">
             <label className="check">
@@ -121,7 +121,7 @@ export default async function NewOutingPage({
         </div>
 
         <div className="actions">
-          <button className="btn btn-primary" type="submit">Uitje opslaan</button>
+          <button className="btn btn-primary" type="submit">Evenement opslaan</button>
           <a className="btn btn-secondary" href="/uitjes">Annuleren</a>
         </div>
       </form>

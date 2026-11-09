@@ -33,7 +33,7 @@ export default async function AllocationPage({
 
   if (!period) {
     return (
-      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar uitjes</Link>}>
+      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar evenementen</Link>}>
         Er is nog geen actieve periode om in te delen.
       </EmptyState>
     );
@@ -196,14 +196,18 @@ export default async function AllocationPage({
             ) : null}
             {run.phase === "proposal" ? (
               <p className="small muted" style={{ marginTop: 10 }}>
-                Bevestigen zet de bellijst klaar. Er wordt nog geen e-mail verstuurd.
+                Bevestigen zet de bellijst klaar en verstuurt de uitslag meteen naar iedereen met
+                een e-mailadres.
+                {tieCount > 0
+                  ? ` Los eerst de ${tieCount === 1 ? "gelijke stand" : `${tieCount} gelijke standen`} op, anders blijven die plekken open.`
+                  : ""}
               </p>
             ) : null}
           </div>
 
           <div className="section-title">
-            <h2>Per uitje</h2>
-            <span className="small muted">Klik op een uitje voor de daglijst</span>
+            <h2>Per evenement</h2>
+            <span className="small muted">Klik op een evenement voor de daglijst</span>
           </div>
 
           <div className="list">
@@ -234,7 +238,7 @@ export default async function AllocationPage({
                   </div>
 
                   {assigned.length === 0 && waitlist.length === 0 && ties.length === 0 ? (
-                    <p className="muted">Geen opgaven voor dit uitje.</p>
+                    <p className="muted">Geen opgaven voor dit evenement.</p>
                   ) : null}
 
                   {assigned.length ? (
@@ -260,6 +264,16 @@ export default async function AllocationPage({
                           <div key={row.id} className="person-line">
                             <span className="who">{row.first_name} {row.last_name}</span>
                             <span className="why">{row.reason_text}</span>
+                            {run.phase === "proposal" ? (
+                              <form action={assignManuallyAction}>
+                                <input type="hidden" name="run_id" value={run.id} />
+                                <input type="hidden" name="outing_id" value={outing.id} />
+                                <input type="hidden" name="participant_id" value={row.participant_id} />
+                                <button className="btn btn-secondary" type="submit">
+                                  Toch plaatsen
+                                </button>
+                              </form>
+                            ) : null}
                           </div>
                         ))}
                       </div>

@@ -33,9 +33,9 @@ export default async function LocationsPage({
     <>
       <PageHeader
         title="Locaties en categorieën"
-        intro="Leg vaste locaties met adres vast en deel ze in bij een categorie, zoals museum of uit eten. Bij een uitje kies je daarna de locatie."
+        intro="Leg vaste locaties met adres vast en deel ze in bij een categorie, zoals museum of uit eten. Bij een evenement kies je daarna de locatie."
         nextStep="Maak eerst de categorieën die je gebruikt. Voeg daarna de locaties toe."
-        actions={<BackLink href="/uitjes">Terug naar uitjes</BackLink>}
+        actions={<BackLink href="/uitjes">Terug naar evenementen</BackLink>}
       />
 
       {ok ? <Alert kind="success">Opgeslagen.</Alert> : null}

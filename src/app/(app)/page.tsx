@@ -16,9 +16,9 @@ function taskFor(period: ReturnType<typeof getActivePeriod>, run: Run | undefine
   if (!period) {
     return {
       title: "Er is nog geen actieve periode.",
-      text: "Maak eerst een periode en uitjes aan.",
+      text: "Maak eerst een periode en evenementen aan.",
       href: "/uitjes",
-      label: "Naar uitjes",
+      label: "Naar evenementen",
     };
   }
   if (period.status === "published" && period.deadline >= today) {
@@ -117,7 +117,7 @@ export default async function DashboardPage() {
 
       {!can(user, "program.view") && can(user, "own.outings") ? (
         <div className="alert alert-info">
-          Je ziet alleen de uitjes en daglijsten waarvoor je als chauffeur bent ingedeeld.
+          Je ziet alleen de evenementen en daglijsten waarvoor je als chauffeur bent ingedeeld.
         </div>
       ) : null}
 
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
         </div>
         <div className="stat">
           <strong>{outingCount}</strong>
-          <span>uitjes in de periode</span>
+          <span>evenementen in de periode</span>
         </div>
         <div className="stat">
           <strong>{signupCount}</strong>
@@ -167,16 +167,16 @@ export default async function DashboardPage() {
       ) : null}
 
       <div className="section-title">
-        <h2>Eerstvolgende uitjes</h2>
+        <h2>Eerstvolgende evenementen</h2>
         <Link href="/uitjes" className="btn-link">
-          Alle uitjes
+          Alle evenementen
         </Link>
       </div>
 
       {nextOutings.length === 0 ? (
         <div className="empty">
-          <h3>Nog geen uitjes gepland</h3>
-          <p>Voeg een periode en uitjes toe om te kunnen beginnen.</p>
+          <h3>Nog geen evenementen gepland</h3>
+          <p>Voeg een periode en evenementen toe om te kunnen beginnen.</p>
         </div>
       ) : (
         <div className="list">
@@ -208,10 +208,12 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="alert alert-info" style={{ marginTop: 24 }}>
-        <strong>Demo-omgeving.</strong> Alle namen, telefoonnummers en uitjes zijn verzonnen.
-        Gebruik deze omgeving niet met echte persoonsgegevens.
-      </div>
+      {process.env.SEED_DEMO_DATA !== "false" ? (
+        <div className="alert alert-info" style={{ marginTop: 24 }}>
+          <strong>Demo-omgeving.</strong> Alle namen, telefoonnummers en evenementen zijn verzonnen.
+          Gebruik deze omgeving niet met echte persoonsgegevens.
+        </div>
+      ) : null}
     </>
   );
 }

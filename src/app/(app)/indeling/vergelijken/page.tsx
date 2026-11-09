@@ -77,7 +77,7 @@ export default async function ComparisonPage({
 
   if (!period) {
     return (
-      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar uitjes</Link>}>
+      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar evenementen</Link>}>
         Er is nog geen actieve periode.
       </EmptyState>
     );
@@ -265,7 +265,7 @@ export default async function ComparisonPage({
                   </div>
 
                   {rows.length === 0 ? (
-                    <p className="muted">Geen opgaven voor dit uitje.</p>
+                    <p className="muted">Geen opgaven voor dit evenement.</p>
                   ) : (
                     <div className="assigned-list">
                       {rows.map(({ participantId, systemRow, manualRow, diff, name }) => (
@@ -293,7 +293,7 @@ export default async function ComparisonPage({
           </div>
 
           <div className="section-title">
-            <h2>Aantal uitjes per persoon</h2>
+            <h2>Aantal evenementen per persoon</h2>
             <span className="small muted">Controle op eerlijkheid</span>
           </div>
           <div className="card">

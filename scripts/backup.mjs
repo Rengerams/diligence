@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { createCipheriv, createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 const dbPath = path.resolve(process.env.DILIGENCE_DB_PATH ?? "data/diligence.db");
@@ -17,9 +18,13 @@ const key = /^[0-9a-f]{64}$/i.test(keyRaw)
 if (key.length !== 32) throw new Error("BACKUP_KEY moet 32 bytes zijn (base64 of hex).");
 if (!fs.existsSync(dbPath)) throw new Error(`Database niet gevonden: ${dbPath}`);
 
-fs.mkdirSync(backupDir, { recursive: true });
+fs.mkdirSync(backupDir, { recursive: true, mode: 0o700 });
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-const temp = path.join(backupDir, `.snapshot-${stamp}.db`);
+// De onversleutelde momentopname staat nooit in de back-upmap: alleen in een
+// tijdelijke map die na afloop weer verdwijnt.
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "diligence-snapshot-"));
+fs.chmodSync(tempDir, 0o700);
+const temp = path.join(tempDir, "snapshot.db");
 const target = path.join(backupDir, `diligence-${stamp}.db.enc`);
 
 const db = new DatabaseSync(dbPath);
@@ -38,6 +43,7 @@ try {
   fs.writeFileSync(target, Buffer.concat([Buffer.from("DILIGENCE1"), iv, tag, encrypted]), {
     mode: 0o600,
   });
+  fs.chmodSync(target, 0o600);
 
   const retentionDays = Math.max(1, Number(process.env.BACKUP_RETENTION_DAYS ?? 30));
   const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
@@ -56,5 +62,5 @@ try {
     }),
   );
 } finally {
-  if (fs.existsSync(temp)) fs.unlinkSync(temp);
+  fs.rmSync(tempDir, { recursive: true, force: true });
 }

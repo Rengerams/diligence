@@ -56,7 +56,7 @@ export default async function ExcelImportPage({
         intro="Laad het programma uit een .xlsx-bestand met maandkoppen en dagregels, of met een datumkolom."
         nextStep={
           preview
-            ? "Controleer het aantal uitjes en sla daarna op."
+            ? "Controleer het aantal evenementen en sla daarna op."
             : "Kies het Excel-bestand. Je ziet eerst een controle voordat er iets wordt opgeslagen."
         }
         actions={<BackLink href="/uitjes/import">Terug naar importeren</BackLink>}
@@ -90,7 +90,7 @@ export default async function ExcelImportPage({
       ) : (
         <>
           <div className="alert alert-success">
-            <strong>{parsed.rows.length} uitjes gevonden in {preview.file_name}.</strong> Klopt dat?
+            <strong>{parsed.rows.length} evenementen gevonden in {preview.file_name}.</strong> Klopt dat?
           </div>
           {parsed.errors.length ? (
             <Alert kind="error">
@@ -137,7 +137,7 @@ export default async function ExcelImportPage({
           <form action={commitExcelProgramAction} className="actions" style={{ marginTop: 20 }}>
             <input type="hidden" name="preview_id" value={preview.id} />
             <button className="btn btn-primary" type="submit" disabled={parsed.errors.length > 0}>
-              {parsed.rows.length} uitjes opslaan
+              {parsed.rows.length} evenementen opslaan
             </button>
             <Link className="btn btn-secondary" href="/uitjes/import/excel">Ander bestand</Link>
           </form>

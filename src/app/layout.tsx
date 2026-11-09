@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Diligence Beheer",
-  description: "Beheersysteem voor de uitjes van Stichting Diligence Almere",
+  description: "Beheersysteem voor de evenementen van Stichting Diligence Almere",
   icons: { icon: "/brand/logo-trim.png" },
 };
 

@@ -46,11 +46,11 @@ try {
   await login("balie@diligence.local");
   const nav = await page.locator(".nav a").allTextContents();
   if (!nav.includes("Deelnemers")) throw new Error(`Deelnemers ontbreekt in nav: ${nav.join(", ")}`);
-  if (nav.includes("Uitjes")) throw new Error(`Uitjes had verborgen moeten zijn: ${nav.join(", ")}`);
+  if (nav.includes("Evenementen")) throw new Error(`Evenementen had verborgen moeten zijn: ${nav.join(", ")}`);
   await page.goto(`${base}/deelnemers`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Deelnemers", exact: true }).waitFor();
   await page.goto(`${base}/uitjes`, { waitUntil: "networkidle" });
-  if (!page.url().includes("melding")) throw new Error("Uitjes had geblokkeerd moeten zijn");
+  if (!page.url().includes("melding")) throw new Error("Evenementen had geblokkeerd moeten zijn");
   console.log("- rechten van eigen rol: ok");
 
   await page.getByRole("button", { name: "Uitloggen" }).click();

@@ -20,7 +20,7 @@ export async function createFreeSpotAlertAction(form: FormData): Promise<void> {
     "SELECT description, date FROM outings WHERE id = ?",
     outingId,
   );
-  if (!outing) redirect("/uitjes?error=Uitje+niet+gevonden.");
+  if (!outing) redirect("/uitjes?error=Evenement+niet+gevonden.");
   const id = `alert-${randomUUID()}`;
   run(
     "INSERT INTO alerts (id, type, outing_id, participant_id, message, status, created_by, created_at) VALUES (?, 'free_spot', ?, ?, ?, 'open', ?, ?)",
