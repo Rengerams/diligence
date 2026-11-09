@@ -88,7 +88,7 @@ export default async function DayListPage({
     <>
       <div className="no-print">
         <div className="actions" style={{ marginBottom: 16 }}>
-          <BackLink href={`/uitjes/${outing.id}`}>Terug naar het uitje</BackLink>
+          <BackLink href={`/uitjes/${outing.id}`}>Terug naar het evenement</BackLink>
           <PrintButton label="Daglijst afdrukken" />
         </div>
         {!isConfirmed ? (
@@ -183,7 +183,7 @@ export default async function DayListPage({
       </div>
 
       <div className="no-print" style={{ marginTop: 16 }}>
-        <Link className="btn btn-secondary" href={`/uitjes/${outing.id}`}>Terug naar het uitje</Link>
+        <Link className="btn btn-secondary" href={`/uitjes/${outing.id}`}>Terug naar het evenement</Link>
         <PrintButton label="Daglijst afdrukken" />
       </div>
     </>

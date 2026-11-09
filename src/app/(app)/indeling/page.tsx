@@ -33,7 +33,7 @@ export default async function AllocationPage({
 
   if (!period) {
     return (
-      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar uitjes</Link>}>
+      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar evenementen</Link>}>
         Er is nog geen actieve periode om in te delen.
       </EmptyState>
     );
@@ -202,8 +202,8 @@ export default async function AllocationPage({
           </div>
 
           <div className="section-title">
-            <h2>Per uitje</h2>
-            <span className="small muted">Klik op een uitje voor de daglijst</span>
+            <h2>Per evenement</h2>
+            <span className="small muted">Klik op een evenement voor de daglijst</span>
           </div>
 
           <div className="list">
@@ -234,7 +234,7 @@ export default async function AllocationPage({
                   </div>
 
                   {assigned.length === 0 && waitlist.length === 0 && ties.length === 0 ? (
-                    <p className="muted">Geen opgaven voor dit uitje.</p>
+                    <p className="muted">Geen opgaven voor dit evenement.</p>
                   ) : null}
 
                   {assigned.length ? (

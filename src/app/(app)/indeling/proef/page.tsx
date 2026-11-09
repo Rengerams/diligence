@@ -16,7 +16,7 @@ export default async function PilotPage({
 
   if (!period) {
     return (
-      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar uitjes</Link>}>
+      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar evenementen</Link>}>
         Er is nog geen actieve periode.
       </EmptyState>
     );

@@ -73,11 +73,11 @@ export default async function OutingPage({
           <PageHeader
             title={outing.description}
             intro={`${formatDateLong(outing.date)} · ${outing.start_time}–${outing.end_time}`}
-            nextStep="Deze uitje is niet aan jou toegewezen."
-            actions={<BackLink href="/uitjes">Terug naar mijn uitjes</BackLink>}
+            nextStep="Deze evenement is niet aan jou toegewezen."
+            actions={<BackLink href="/uitjes">Terug naar mijn evenementen</BackLink>}
           />
           <EmptyState title="Niet aan jou toegewezen">
-            De coördinator heeft dit uitje niet aan jou gekoppeld. Je ziet alleen de uitjes
+            De coördinator heeft dit evenement niet aan jou gekoppeld. Je ziet alleen de evenementen
             waarvoor je als chauffeur bent ingedeeld.
           </EmptyState>
         </>
@@ -182,7 +182,7 @@ export default async function OutingPage({
             ? "Controleer de deelnemers en het vervoer. Print daarna de daglijst voor de chauffeur."
             : "Bekijk wie er mee gaan en met welk busje je rijdt."
         }
-        actions={<BackLink href="/uitjes">Terug naar uitjes</BackLink>}
+        actions={<BackLink href="/uitjes">Terug naar evenementen</BackLink>}
       />
 
       {ok ? <Alert kind="success">{ok === "1" ? "Opgeslagen." : ok}</Alert> : null}
@@ -358,7 +358,7 @@ export default async function OutingPage({
                 <span className="small muted">{signups.length} personen</span>
               </div>
               {signups.length === 0 ? (
-                <p className="muted">Nog geen opgaven voor dit uitje.</p>
+                <p className="muted">Nog geen opgaven voor dit evenement.</p>
               ) : (
                 <div className="list">
                   {signups.map((signup) => (
@@ -371,10 +371,10 @@ export default async function OutingPage({
                       </span>
                       <span className="why">
                         {signup.target_type === "period"
-                          ? "Alle uitjes"
+                          ? "Alle evenementen"
                           : signup.target_type === "series"
                             ? "Reeks"
-                            : "Dit uitje"}
+                            : "Dit evenement"}
                         {signup.note ? ` · ${signup.note}` : ""}
                       </span>
                     </div>
@@ -387,7 +387,7 @@ export default async function OutingPage({
 
         <aside>
           <div className="card">
-            <h2>Uitje</h2>
+            <h2>Evenement</h2>
             <dl className="definition">
               <dt>Datum</dt>
               <dd>{formatDateLong(outing.date)}</dd>
@@ -464,7 +464,7 @@ export default async function OutingPage({
 
             {vehicles.length > 0 && totalSeats < outing.capacity ? (
               <p className="small" style={{ color: "var(--warning)" }}>
-                Het aantal voertuigplekken is lager dan de capaciteit van het uitje.
+                Het aantal voertuigplekken is lager dan de capaciteit van het evenement.
               </p>
             ) : null}
 

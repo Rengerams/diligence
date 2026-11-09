@@ -116,7 +116,7 @@ const REASON = {
   placed_specific: "Specifieke opgave; er was plek.",
   placed_flexible: "Flexibele opgave; deze datum had de meeste ruimte.",
   placed_guarantee: "Nieuwe deelnemer met startkans; er was plek.",
-  waitlist_capacity: "Het uitje is vol; op de reservelijst geplaatst.",
+  waitlist_capacity: "Het evenement is vol; op de reservelijst geplaatst.",
   waitlist_group: "Het groepje past niet in één keer; samen op de reservelijst.",
   waitlist_series: "Alle data van deze reeks zijn vol; op de reservelijst geplaatst.",
   tie: "Gelijke stand; de coördinator beslist.",
@@ -209,11 +209,11 @@ export function calculateAllocation(input: AllocationInput): AllocationResult {
           groupId = group.id;
           groupName = group.name;
           memberIds = group.memberIds.filter((memberId) => {
-            // Een lid dat voor deze uitjes "Alleen" opgaf, doet niet mee in de groep.
+            // Een lid dat voor deze evenementen "Alleen" opgaf, doet niet mee in de groep.
             const hasAlone = aloneSignups.some(
               (s) => s.participantId === memberId && overlaps(s, unit, outingsById),
             );
-            // Een lid met een eigen specifieke opgave voor dit uitje houdt die opgave.
+            // Een lid met een eigen specifieke opgave voor dit evenement houdt die opgave.
             const hasOwnSpecific = specificSignups.some(
               (s) =>
                 s.participantId === memberId &&
@@ -295,7 +295,7 @@ export function calculateAllocation(input: AllocationInput): AllocationResult {
   const ties: AllocationTieEntry[] = [];
 
   // Eenvoudige, transparante gelijke-stand-detectie: exact dezelfde prioriteit,
-  // hetzelfde ene uitje en samen meer vraag dan plekken. De plekken blijven vrij.
+  // hetzelfde ene evenement en samen meer vraag dan plekken. De plekken blijven vrij.
   const tieGroups = new Map<string, Claim[]>();
   for (const claim of claims) {
     if (!claim.fixed || claim.outingIds.length !== 1) continue;

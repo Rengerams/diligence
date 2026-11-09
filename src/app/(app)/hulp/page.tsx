@@ -25,7 +25,7 @@ export default async function HelpPage() {
         <section className="card">
           <h2>2. Een opgave invoeren</h2>
           <p>
-            Ga naar <Link href="/opgave">Opgave</Link>, zoek de deelnemer en kies de uitjes. Staat
+            Ga naar <Link href="/opgave">Opgave</Link>, zoek de deelnemer en kies de evenementen. Staat
             de persoon in een groepje, laat dan “Met groepje” staan. Lees de bevestigingsregel voor
             en klik op opslaan.
           </p>
@@ -34,8 +34,8 @@ export default async function HelpPage() {
         <section className="card">
           <h2>3. Het programma bekijken</h2>
           <p>
-            Ga naar <Link href="/uitjes">Uitjes</Link>. Elk uitje toont datum, tijd, prijs en
-            capaciteit. Klik op een uitje voor de deelnemers en het vervoer.
+            Ga naar <Link href="/uitjes">Evenementen</Link>. Elk evenement toont datum, tijd, prijs en
+            capaciteit. Klik op een evenement voor de deelnemers en het vervoer.
           </p>
         </section>
 
@@ -60,7 +60,7 @@ export default async function HelpPage() {
         <section className="card">
           <h2>6. Voertuigen en daglijst</h2>
           <p>
-            Ga naar <Link href="/uitjes">Uitjes</Link> en open het uitje. Koppel daar een voertuig
+            Ga naar <Link href="/uitjes">Evenementen</Link> en open het evenement. Koppel daar een voertuig
             en een chauffeur. Print de pagina met Ctrl+P voor de chauffeur.
           </p>
         </section>

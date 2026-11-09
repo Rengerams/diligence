@@ -37,7 +37,7 @@ export default async function AlertsPage({
         title="Meldingen"
         intro="Plekken die vrijkomen nadat de indeling rond is. De coördinator bekijkt ze zelf; de app plaatst niet automatisch iemand anders."
         nextStep="Bel of mail zelf iemand van de reservelijst en vink de melding daarna af."
-        actions={<BackLink href="/uitjes">Terug naar uitjes</BackLink>}
+        actions={<BackLink href="/uitjes">Terug naar evenementen</BackLink>}
       />
       {ok ? <Alert kind="success">Opgeslagen.</Alert> : null}
       {error ? <Alert kind="error">{error}</Alert> : null}
@@ -59,7 +59,7 @@ export default async function AlertsPage({
                   </span>
                 </div>
                 <Link className="btn btn-secondary" href={`/uitjes/${alert.outing_id}`}>
-                  Naar uitje
+                  Naar evenement
                 </Link>
               </div>
               <p>{alert.message || "Er is een plek vrijgekomen."}</p>

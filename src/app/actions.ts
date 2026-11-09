@@ -171,7 +171,7 @@ export async function saveSignups(form: FormData): Promise<void> {
     );
   }
   if (mode === "specific" && outingIds.length === 0) {
-    fail(`/opgave?participantId=${participantId}`, "Kies minimaal één uitje.");
+    fail(`/opgave?participantId=${participantId}`, "Kies minimaal één evenement.");
   }
 
   const group = get<{ id: string; name: string }>(
@@ -186,7 +186,7 @@ export async function saveSignups(form: FormData): Promise<void> {
   );
   for (const outingId of outingIds) {
     if (!validOutingIds.has(outingId)) {
-      fail(`/opgave?participantId=${participantId}`, "Een van de gekozen uitjes hoort niet bij deze periode.");
+      fail(`/opgave?participantId=${participantId}`, "Een van de gekozen evenementen hoort niet bij deze periode.");
     }
   }
 
@@ -664,7 +664,7 @@ export async function assignManuallyAction(form: FormData): Promise<void> {
 
   const participant = get<Participant>("SELECT * FROM participants WHERE id = ?", participantId);
   const outing = get<Outing>("SELECT * FROM outings WHERE id = ?", outingId);
-  if (!participant || !outing) fail("/indeling", "Deelnemer of uitje niet gevonden.");
+  if (!participant || !outing) fail("/indeling", "Deelnemer of evenement niet gevonden.");
 
   run(
     `INSERT INTO allocations
@@ -865,7 +865,7 @@ export async function createOutingAction(form: FormData): Promise<void> {
     action: "outing.create",
     entityType: "outing",
     entityId: id,
-    summary: `Uitje ${description} op ${date} is toegevoegd.`,
+    summary: `Evenement ${description} op ${date} is toegevoegd.`,
     after: { description, date, capacity },
   });
   revalidatePath("/uitjes");
@@ -878,7 +878,7 @@ export async function updateOutingPlaceAction(form: FormData): Promise<void> {
   const locationId = value(form, "location_id");
   const categoryId = value(form, "category_id");
   const outing = get<Outing>("SELECT * FROM outings WHERE id = ?", outingId);
-  if (!outing) fail("/uitjes", "Uitje niet gevonden.");
+  if (!outing) fail("/uitjes", "Evenement niet gevonden.");
   run(
     "UPDATE outings SET location_id = ?, category_id = ? WHERE id = ?",
     locationId || null,
@@ -903,7 +903,7 @@ export async function updateCapacityAction(form: FormData): Promise<void> {
   const outingId = value(form, "outing_id");
   const capacity = Number.parseInt(value(form, "capacity"), 10);
   const outing = get<Outing>("SELECT * FROM outings WHERE id = ?", outingId);
-  if (!outing) fail("/uitjes", "Uitje niet gevonden.");
+  if (!outing) fail("/uitjes", "Evenement niet gevonden.");
   if (!Number.isFinite(capacity) || capacity < 1 || capacity > 100) {
     fail(`/uitjes/${outingId}`, "De capaciteit moet tussen 1 en 100 liggen.");
   }
@@ -1176,14 +1176,14 @@ export async function importManualAllocationAction(form: FormData): Promise<void
       : sameDate;
     if (matches.length !== 1) {
       unknown.push(
-        `rij ${rowNumber}: uitje ${row.date} ${row.description || "(zonder omschrijving)"}`,
+        `rij ${rowNumber}: evenement ${row.date} ${row.description || "(zonder omschrijving)"}`,
       );
       return;
     }
     const outing = matches[0];
     const key = `${outing.id}|${participantId}`;
     if (seen.has(key)) {
-      unknown.push(`rij ${rowNumber}: dezelfde persoon staat dubbel bij hetzelfde uitje`);
+      unknown.push(`rij ${rowNumber}: dezelfde persoon staat dubbel bij hetzelfde evenement`);
       return;
     }
     seen.add(key);
@@ -1273,7 +1273,7 @@ export async function previewExcelProgramAction(form: FormData): Promise<void> {
     );
   }
   if (parsed.rows.length === 0) {
-    fail("/uitjes/import/excel", "Er staan geen geldige uitjes in het bestand.");
+    fail("/uitjes/import/excel", "Er staan geen geldige evenementen in het bestand.");
   }
 
   const id = `preview-${randomUUID()}`;
@@ -1311,7 +1311,7 @@ export async function commitExcelProgramAction(form: FormData): Promise<void> {
       less_suitable: boolean;
     }[];
   };
-  if (!parsed.rows?.length) fail("/uitjes/import/excel", "Er staan geen uitjes in deze controle.");
+  if (!parsed.rows?.length) fail("/uitjes/import/excel", "Er staan geen evenementen in deze controle.");
 
   const batchId = `imp-${randomUUID()}`;
   const created: string[] = [];
@@ -1360,7 +1360,7 @@ export async function commitExcelProgramAction(form: FormData): Promise<void> {
     action: "program.import",
     entityType: "period",
     entityId: preview.period_id,
-    summary: `${created.length} uitjes uit ${preview.file_name} geïmporteerd.`,
+    summary: `${created.length} evenementen uit ${preview.file_name} geïmporteerd.`,
     after: { count: created.length, file: preview.file_name },
   });
   revalidatePath("/uitjes");
@@ -1381,7 +1381,7 @@ export async function importProgramAction(form: FormData): Promise<void> {
     );
   }
   if (parsed.rows.length === 0) {
-    fail("/uitjes/import", "Er staan geen geldige uitjes in het bestand.");
+    fail("/uitjes/import", "Er staan geen geldige evenementen in het bestand.");
   }
   const outside = parsed.rows.filter(
     (row) => row.date < period.start_date || row.date > period.end_date,
@@ -1439,7 +1439,7 @@ export async function importProgramAction(form: FormData): Promise<void> {
     action: "program.import",
     entityType: "period",
     entityId: period.id,
-    summary: `${created.length} uitjes geïmporteerd voor ${period.name}.`,
+    summary: `${created.length} evenementen geïmporteerd voor ${period.name}.`,
     after: { count: created.length },
   });
 
@@ -1457,7 +1457,7 @@ export async function undoImportAction(form: FormData): Promise<void> {
   if (!batch) fail("/uitjes/import", "Import niet gevonden.");
   if (batch.status === "undone") fail("/uitjes/import", "Deze import is al ongedaan gemaakt.");
   const ids = JSON.parse(batch.outing_ids) as string[];
-  if (ids.length === 0) fail("/uitjes/import", "Deze import bevat geen uitjes.");
+  if (ids.length === 0) fail("/uitjes/import", "Deze import bevat geen evenementen.");
 
   const placeholders = ids.map(() => "?").join(",");
   const dependent = get<{ n: number }>(
@@ -1471,7 +1471,7 @@ export async function undoImportAction(form: FormData): Promise<void> {
   if (dependent > 0 || allocated > 0) {
     fail(
       "/uitjes/import",
-      "Deze uitjes hebben al opgaven of een indeling. Je kunt de import niet meer in één keer terugdraaien. Zet de uitjes op geannuleerd in plaats van ze te verwijderen.",
+      "Deze evenementen hebben al opgaven of een indeling. Je kunt de import niet meer in één keer terugdraaien. Zet de evenementen op geannuleerd in plaats van ze te verwijderen.",
     );
   }
 
@@ -1486,7 +1486,7 @@ export async function undoImportAction(form: FormData): Promise<void> {
     action: "program.import_undo",
     entityType: "import_batch",
     entityId: batchId,
-    summary: `Import van ${ids.length} uitjes ongedaan gemaakt.`,
+    summary: `Import van ${ids.length} evenementen ongedaan gemaakt.`,
   });
   revalidatePath("/uitjes");
   redirect(`/uitjes/import?undone=1`);
@@ -1496,7 +1496,7 @@ export async function assignVehiclesAutoAction(form: FormData): Promise<void> {
   const user = await requirePermission("vehicles.manage");
   const outingId = value(form, "outing_id");
   const outing = get<Outing>("SELECT * FROM outings WHERE id = ?", outingId);
-  if (!outing) fail("/uitjes", "Uitje niet gevonden.");
+  if (!outing) fail("/uitjes", "Evenement niet gevonden.");
 
   const available = all<{ id: string; name: string; seats: number; license_plate: string }>(
     `SELECT v.id, v.name, v.seats, v.license_plate
@@ -1573,7 +1573,7 @@ export async function addVehicleToOutingAction(form: FormData): Promise<void> {
     "SELECT id, name, seats, license_plate FROM vehicles WHERE id = ? AND active = 1 AND archived_at IS NULL",
     vehicleId,
   );
-  if (!outing || !vehicle) fail(`/uitjes/${outingId}`, "Uitje of voertuig niet gevonden.");
+  if (!outing || !vehicle) fail(`/uitjes/${outingId}`, "Evenement of voertuig niet gevonden.");
 
   const booked = get<{ id: string }>(
     "SELECT id FROM outing_vehicles WHERE vehicle_id = ? AND service_date = ? AND outing_id <> ?",
@@ -1581,7 +1581,7 @@ export async function addVehicleToOutingAction(form: FormData): Promise<void> {
     outing.date,
     outingId,
   );
-  if (booked) fail(`/uitjes/${outingId}`, "Dit voertuig is op deze dag al voor een ander uitje geboekt.");
+  if (booked) fail(`/uitjes/${outingId}`, "Dit voertuig is op deze dag al voor een ander evenement geboekt.");
 
   try {
     run(
@@ -1597,7 +1597,7 @@ export async function addVehicleToOutingAction(form: FormData): Promise<void> {
       NOW(),
     );
   } catch {
-    fail(`/uitjes/${outingId}`, "Dit voertuig is al aan dit uitje gekoppeld.");
+    fail(`/uitjes/${outingId}`, "Dit voertuig is al aan dit evenement gekoppeld.");
   }
 
   writeAudit({
@@ -1668,7 +1668,7 @@ export async function saveAttendanceAction(form: FormData): Promise<void> {
   const user = await requirePermission("program.manage");
   const outingId = value(form, "outing_id");
   const outing = get<Outing>("SELECT * FROM outings WHERE id = ?", outingId);
-  if (!outing) fail("/uitjes", "Uitje niet gevonden.");
+  if (!outing) fail("/uitjes", "Evenement niet gevonden.");
   const allocationRun = get<Run>(
     "SELECT * FROM allocation_runs WHERE period_id = ? AND phase = 'confirmed' ORDER BY confirmed_at DESC LIMIT 1",
     outing.period_id,
@@ -1707,7 +1707,7 @@ export async function saveAttendanceAction(form: FormData): Promise<void> {
   });
   revalidatePath(`/uitjes/${outingId}`);
   revalidatePath(`/uitjes/${outingId}/afronden`);
-  redirect(`/uitjes/${outingId}?ok=${encodeURIComponent("Aanwezigheid opgeslagen en uitje afgerond.")}`);
+  redirect(`/uitjes/${outingId}?ok=${encodeURIComponent("Aanwezigheid opgeslagen en evenement afgerond.")}`);
 }
 
 export async function anonymizeParticipantAction(form: FormData): Promise<void> {

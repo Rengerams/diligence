@@ -20,7 +20,7 @@ export default async function LoginPage({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/logo-trim.png" alt="Logo Stichting Diligence Almere" />
         <h1>Diligence Beheer</h1>
-        <p className="tagline">De leukste uitjes voor Almeerse 55-plussers</p>
+        <p className="tagline">De leukste evenementen voor Almeerse 55-plussers</p>
 
         {error ? (
           <div className="alert alert-error" role="alert">

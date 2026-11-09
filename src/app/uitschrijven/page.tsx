@@ -40,7 +40,7 @@ export default async function UnsubscribePage({
               {notification.first_name} {notification.last_name}
             </p>
             <p>
-              Wilt u geen e-mails meer ontvangen over de uitjes? Dan bellen we u voortaan als dat
+              Wilt u geen e-mails meer ontvangen over de evenementen? Dan bellen we u voortaan als dat
               nodig is. U kunt zich later altijd weer aanmelden via de coördinator.
             </p>
             <form action={unsubscribeAction}>

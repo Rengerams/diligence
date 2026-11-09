@@ -62,10 +62,10 @@ try {
   await step("programma importeren uit CSV", async () => {
     await page.goto(`${base}/uitjes/import`, { waitUntil: "networkidle" });
     await page.setInputFiles("#program-file", "public/templates/programma-import.csv");
-    await page.getByText("Dit worden 3 uitjes").waitFor();
+    await page.getByText("Dit worden 3 evenementen").waitFor();
     await page.getByRole("button", { name: "Definitief opslaan" }).click();
     await page.waitForURL(/\/uitjes\/import\?batch=.*ok=1/);
-    await page.getByText("3 uitjes geïmporteerd").waitFor();
+    await page.getByText("3 evenementen geïmporteerd").waitFor();
   });
 
   await step("indelingsvoorstel berekenen", async () => {
@@ -128,7 +128,7 @@ try {
     await page.getByRole("heading", { name: "Aanwezigheid registreren" }).waitFor();
     const first = page.locator('input[name="present"]').first();
     await first.uncheck();
-    await page.getByRole("button", { name: "Aanwezigheid opslaan en uitje afronden" }).click();
+    await page.getByRole("button", { name: "Aanwezigheid opslaan en evenement afronden" }).click();
     await page.waitForURL(/\/uitjes\/o-01\?ok=/);
     await page.getByText("Aanwezigheid opgeslagen").waitFor();
   });

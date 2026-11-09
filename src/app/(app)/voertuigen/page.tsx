@@ -29,7 +29,7 @@ export default async function VehiclesPage({
       <PageHeader
         title="Voertuigen"
         intro="Voeg voertuigen toe of wijzig ze. Naam, kenteken en aantal plekken mogen altijd veranderen; oude daglijsten houden de gegevens van toen."
-        nextStep="Controleer of de busjes en de touringcar met het juiste aantal plekken en kenteken staan. Daarna kun je ze aan een uitje koppelen."
+        nextStep="Controleer of de busjes en de touringcar met het juiste aantal plekken en kenteken staan. Daarna kun je ze aan een evenement koppelen."
       />
 
       {ok ? <Alert kind="success">Voertuig opgeslagen.</Alert> : null}
@@ -119,7 +119,7 @@ export default async function VehiclesPage({
                 <div className="actions">
                   <button className="btn btn-secondary" type="submit">Wijzigingen opslaan</button>
                   <span className="small muted">
-                    {usage.get(vehicle.id) ?? 0} toekomstige uitjes gebruiken dit voertuig.
+                    {usage.get(vehicle.id) ?? 0} toekomstige evenementen gebruiken dit voertuig.
                   </span>
                 </div>
               </form>

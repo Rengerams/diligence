@@ -20,10 +20,10 @@ try {
   await page.setInputFiles("#excel-file", "public/templates/programma-import.xlsx");
   await page.getByRole("button", { name: "Bestand controleren" }).click();
   await page.waitForURL(/\/uitjes\/import\/excel\?preview=/);
-  await page.getByText("3 uitjes gevonden").waitFor();
-  await page.getByRole("button", { name: "3 uitjes opslaan" }).click();
+  await page.getByText("3 evenementen gevonden").waitFor();
+  await page.getByRole("button", { name: "3 evenementen opslaan" }).click();
   await page.waitForURL(/\/uitjes\/import\?batch=.*ok=1/);
-  await page.getByText("3 uitjes geïmporteerd").waitFor();
+  await page.getByText("3 evenementen geïmporteerd").waitFor();
   console.log("Excel-import: ok");
 
   if (errors.length) {

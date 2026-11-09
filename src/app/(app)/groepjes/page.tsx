@@ -156,7 +156,7 @@ export default async function GroupsPage({
 
       <p className="small muted" style={{ marginTop: 16 }}>
         Groepjes zijn ook zichtbaar op de <Link href="/deelnemers">deelnemerspagina</Link> en in de
-        deelnemerslijst van een uitje.
+        deelnemerslijst van een evenement.
       </p>
     </>
   );

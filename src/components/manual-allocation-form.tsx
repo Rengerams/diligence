@@ -30,7 +30,7 @@ export function ManualAllocationForm({ periodId }: { periodId: string }) {
       <div className="card">
         <h2>Stap 1: kies de handmatige indeling</h2>
         <p className="muted">
-          Eén regel per deelnemer per uitje, met status ingedeeld, reserve of niet. De indeling
+          Eén regel per deelnemer per evenement, met status ingedeeld, reserve of niet. De indeling
           wordt alleen naast het systeemvoorstel gezet; er wordt niets bevestigd of verstuurd.
         </p>
         <div className="actions">
@@ -71,7 +71,7 @@ export function ManualAllocationForm({ periodId }: { periodId: string }) {
             </div>
           ) : (
             <div className="alert alert-success">
-              Dit worden {parsed.rows.length} regels. De koppeling aan deelnemers en uitjes gebeurt
+              Dit worden {parsed.rows.length} regels. De koppeling aan deelnemers en evenementen gebeurt
               bij het opslaan; onbekende regels leveren dan een melding op.
             </div>
           )}

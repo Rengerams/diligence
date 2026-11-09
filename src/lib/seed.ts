@@ -439,7 +439,7 @@ export function seedDatabase(db: DatabaseSync): void {
   );
 
   // SEED_DEMO_DATA=false laat alleen het beheerdersaccount staan, zonder
-  // verzonnen deelnemers, uitjes en opgaven.
+  // verzonnen deelnemers, evenementen en opgaven.
   if (process.env.SEED_DEMO_DATA === "false") {
     return;
   }
@@ -600,9 +600,9 @@ export function seedDatabase(db: DatabaseSync): void {
   `);
   insertVehicle.run("v-01", "Busje 1", "12-ABC-3", "12ABC3", 7, "Mercedes, 7 gasten", NOW, NOW);
   insertVehicle.run("v-02", "Busje 2", "45-DEF-6", "45DEF6", 7, "Mercedes, 7 gasten", NOW, NOW);
-  insertVehicle.run("v-03", "Touringcar", "78-GHI-9", "78GHI9", 40, "Alleen bij grote uitjes", NOW, NOW);
+  insertVehicle.run("v-03", "Touringcar", "78-GHI-9", "78GHI9", 40, "Alleen bij grote evenementen", NOW, NOW);
 
-  // Laat de chauffeurdemo meteen één toegewezen uitje zien.
+  // Laat de chauffeurdemo meteen één toegewezen evenement zien.
   db.prepare(
     `INSERT INTO outing_vehicles
       (id, outing_id, vehicle_id, service_date, driver_id, seats_snapshot, plate_snapshot, created_at)
@@ -633,5 +633,5 @@ export function seedDatabase(db: DatabaseSync): void {
     INSERT INTO audit_log (at, actor_id, actor_name, action, entity_type, entity_id, summary, before_json, after_json)
     VALUES (?, 'u-admin', 'Beheerder Demo', 'system.seed', 'system', '', ?, NULL, NULL)
   `);
-  insertAudit.run(NOW, "Demonstratiegegevens geladen: 14 deelnemers, 9 uitjes en 24 opgaven.");
+  insertAudit.run(NOW, "Demonstratiegegevens geladen: 14 deelnemers, 9 evenementen en 24 opgaven.");
 }

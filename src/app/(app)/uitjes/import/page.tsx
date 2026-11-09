@@ -34,8 +34,8 @@ export default async function ImportProgramPage({
       <PageHeader
         title="Programma importeren"
         intro={`Laad het programma voor ${period.name} uit een CSV-bestand. Je ziet eerst een controle; pas daarna wordt er iets opgeslagen.`}
-        nextStep="Kies het bestand, controleer het aantal uitjes en de fouten, en sla daarna pas op."
-        actions={<BackLink href="/uitjes">Terug naar uitjes</BackLink>}
+        nextStep="Kies het bestand, controleer het aantal evenementen en de fouten, en sla daarna pas op."
+        actions={<BackLink href="/uitjes">Terug naar evenementen</BackLink>}
       />
 
       {error ? <Alert kind="error">{error}</Alert> : null}
@@ -43,7 +43,7 @@ export default async function ImportProgramPage({
       {ok && batch ? (
         <Alert kind="success">
           <strong>
-            {JSON.parse(batch.outing_ids).length} uitjes geïmporteerd.
+            {JSON.parse(batch.outing_ids).length} evenementen geïmporteerd.
           </strong>{" "}
           Je kunt deze import nog in één keer ongedaan maken zolang er geen opgaven of indeling
           aan hangen.
@@ -65,7 +65,7 @@ export default async function ImportProgramPage({
       <ProgramImportForm periodId={period.id} defaultCapacity={period.default_capacity} />
 
       <p className="small muted" style={{ marginTop: 20 }}>
-        Liever handmatig? <Link href="/uitjes/nieuw">Voeg één uitje toe</Link>.
+        Liever handmatig? <Link href="/uitjes/nieuw">Voeg één evenement toe</Link>.
       </p>
     </>
   );

@@ -16,7 +16,7 @@ export default async function ProgramPrintPage() {
 
   if (!period) {
     return (
-      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar uitjes</Link>}>
+      <EmptyState title="Nog geen periode" action={<Link className="btn btn-primary" href="/uitjes">Naar evenementen</Link>}>
         Er is nog geen actieve periode.
       </EmptyState>
     );
@@ -35,7 +35,7 @@ export default async function ProgramPrintPage() {
     <>
       <div className="no-print" style={{ marginBottom: 16 }}>
         <div className="actions">
-          <Link className="btn btn-secondary" href="/uitjes">Terug naar uitjes</Link>
+          <Link className="btn btn-secondary" href="/uitjes">Terug naar evenementen</Link>
           <PrintButton label="Programma afdrukken" />
         </div>
       </div>
@@ -54,7 +54,7 @@ export default async function ProgramPrintPage() {
         </div>
 
         {outings.length === 0 ? (
-          <p className="muted">Er staan nog geen uitjes in deze periode.</p>
+          <p className="muted">Er staan nog geen evenementen in deze periode.</p>
         ) : (
           [...groups.entries()].map(([month, list]) => (
             <section key={month} style={{ marginTop: 22 }}>
@@ -100,7 +100,7 @@ export default async function ProgramPrintPage() {
       </div>
 
       <div className="no-print" style={{ marginTop: 16 }}>
-        <Link className="btn btn-secondary" href="/uitjes">Terug naar uitjes</Link>
+        <Link className="btn btn-secondary" href="/uitjes">Terug naar evenementen</Link>
         <PrintButton label="Programma afdrukken" />
       </div>
     </>
